@@ -6,7 +6,7 @@ import sys, gc, json, os, time
 import numpy as np
 import shelf as S
 import build_scene as bs
-import mujoco
+import mujoco                     # shelf の後に読み込む（描画の設定を先に決める）
 
 W = 0.020
 FL_R, L_R = (0.010, 0.030), (0.012, 0.020)

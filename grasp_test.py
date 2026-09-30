@@ -5,8 +5,8 @@
 """
 import argparse
 import numpy as np
+from build_scene import build     # 描画の設定を mujoco より先に決めるため、最初に読み込む
 import mujoco
-from build_scene import build
 
 ARM = [f"right_{j}_joint" for j in
        ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"]]

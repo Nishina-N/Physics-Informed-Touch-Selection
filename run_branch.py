@@ -5,8 +5,8 @@
 """
 import sys, gc, json, os, time
 import numpy as np
+import shelf as S                 # build_scene 経由で描画の設定を先に決める
 import mujoco
-import shelf as S
 import perception as P
 import partfilter as F
 import build_scene as bs
