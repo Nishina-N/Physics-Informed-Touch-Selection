@@ -1,5 +1,8 @@
 """G1（Dex3相当ハンド付き）＋机＋立方体＋頭部カメラのシーンを作る。"""
 import math
+import os, sys
+if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+    os.environ.setdefault("MUJOCO_GL", "egl")   # 画面のない Linux ではカメラの描画に EGL を使う（mujoco を読み込む前に決める）
 import mujoco
 
 MENAGERIE = "third_party/mujoco_menagerie/unitree_g1/scene_with_hands.xml"

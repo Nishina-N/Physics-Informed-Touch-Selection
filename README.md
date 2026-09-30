@@ -30,10 +30,10 @@ uv sync                      # Python 3.11、依存は pyproject.toml
 mkdir -p third_party
 git clone https://github.com/google-deepmind/mujoco_menagerie third_party/mujoco_menagerie
 git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a13212855
-export MUJOCO_GL=egl         # 画面のない環境でカメラを描画する場合
 ```
 
 学習済みの予測器 `predictor.pkl` は scikit-learn 1.8.0 で保存しています。
+画面のない Linux では、カメラの描画に EGL を自動で使います（`build_scene.py` の先頭）。Windows・Mac では設定は不要です。
 
 ## ファイル
 

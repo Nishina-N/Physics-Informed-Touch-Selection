@@ -6,8 +6,6 @@
   見えるはずの領域 ＝ 立方体の8頂点を投影した凸包 − 手前にある天板・ロボットの画素（観測画像から分かる）。
   見えている部分の重心は見えている側に偏るので使わない。
 """
-import os
-os.environ.setdefault("MUJOCO_GL", "osmesa"); os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
 import numpy as np
 import mujoco
 import cv2
