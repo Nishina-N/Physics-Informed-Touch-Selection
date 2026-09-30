@@ -1,14 +1,17 @@
 [project]
 name = "pai-hidden-grasp"
 version = "0.1.0"
-description = "Add your description here"
+description = "Touch selection by expected grasp success for partly hidden parts under a shelf (MuJoCo, Unitree G1 + Dex3)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mink>=1.3.0",
     "mujoco>=3.14.0",
     "numpy>=2.4.6",
+    "opencv-python-headless>=4.10,<5",
     "pillow>=12.3.0",
+    "scikit-learn==1.8.0",
+    "scipy>=1.14",
 ]
 
 [project.scripts]

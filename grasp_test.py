@@ -19,16 +19,17 @@ Q_CLOSE = np.array([0.30, -0.263, -1.167, 0.698, 1.556])  # 親指先と中指�
 Q_LO = np.array([-1.05, -1.05, -1.75, 0.0, 0.0])
 Q_HI = np.array([1.05, 0.72, 0.0, 1.57, 1.75])
 S_END = 1.15   # 閉じ指令の終点（触れる姿勢の少し先）
-SQUEEZE = 0.03  # 両指先が触れてからの押し込み量（s）
 
 # 手首姿勢：手首x軸まわりに-75°回し、指先を20°下げる
 ROLL_DEG, PITCH_DEG = -75.0, 20.0
+# 開始時の構え：挟む点をここに置く。頭部カメラから机上の立方体が隠れない位置（見え率99.8%を確認）
+READY = np.array([0.15, -0.40, 1.10])
 
-# 立方体の大きさごとの設定：接近時の指の開き s0 と、手首座標で見た「挟む点」
+# 立方体の大きさごとの設定：接近時の指の開き s0、手首座標で見た「挟む点」、両指先が触れてからの押し込み量 squeeze（s）
 # 挟む点＝軌道上で指先の隙間が立方体の幅になる時の、指先どうしの最近接点の中点
 PER_SIZE = {
-    "cube_20mm": dict(s0=0.75, grasp_pt=np.array([0.126, 0.072, -0.021])),  # s=0.90で隙間19mm
-    "cube_50mm": dict(s0=0.45, grasp_pt=np.array([0.128, 0.076, -0.017])),  # s=0.75で隙間50mm
+    "cube_20mm": dict(s0=0.75, squeeze=0.03, grasp_pt=np.array([0.126, 0.072, -0.021])),  # s=0.90で隙間19mm
+    "cube_50mm": dict(s0=0.45, squeeze=0.08, grasp_pt=np.array([0.128, 0.076, -0.017])),  # s=0.75で隙間50mm
 }
 
 
@@ -45,10 +46,18 @@ def r_target():
 
 
 class Sim:
-    def __init__(self, cube, seed=0, pos_noise=0.0):
+    def __init__(self, cube, seed=0, pos_noise=0.0, record=False):
         self.m = build().compile()
         self.d = mujoco.MjData(self.m)
         m, d = self.m, self.d
+        self.frames = None
+        if record:                                     # 録画：30fpsで横から＋頭部カメラ
+            self.every = max(1, round(1 / 30 / m.opt.timestep))
+            self.renderer = mujoco.Renderer(m, 480, 640)
+            self.seg = mujoco.Renderer(m, 480, 640)       # 頭部カメラでの物体の見え方（画素数）を数える用
+            self.seg.enable_segmentation_rendering()
+            self.cam = mujoco.MjvCamera()
+            self.cam.distance, self.cam.azimuth, self.cam.elevation = 0.35, 240, -10
         self.cube = cube
         self.grasp_pt = PER_SIZE[cube]["grasp_pt"]
         rng = np.random.default_rng(seed)
@@ -59,15 +68,22 @@ class Sim:
         other = "cube_20mm" if cube == "cube_50mm" else "cube_50mm"
         self._set_cube(other, [0.70, -0.45])           # 使わない立方体は机の端へ退避
         self._set_cube(cube, np.array([0.30, -0.18]) + rng.uniform(-pos_noise, pos_noise, 2))
+        if record:
+            self.cam.lookat[:] = [*d.qpos[m.joint(cube + "_free").qposadr[0]:][:2], 0.84]
         self.arm_q = [m.joint(j).qposadr[0] for j in ARM]
         self.arm_v = [m.joint(j).dofadr[0] for j in ARM]
         self.gc_v = self.arm_v + [m.joint(j).dofadr[0] for j in HAND]
         self.act = {m.actuator(i).name: i for i in range(m.nu)}
-        for j, a in zip(ARM, self.arm_q):              # 腕は初期姿勢を保持
-            d.ctrl[self.act[j]] = d.qpos[a]
+        mujoco.mj_forward(m, d)
+        q_ready, _ = self.ik(READY)                    # 構えの姿勢から始める（カメラの視界を空ける）
+        for j, a, q in zip(ARM, self.arm_q, q_ready):
+            d.qpos[a] = q
+            d.ctrl[self.act[j]] = q
         self.set_hand(hand_q(PER_SIZE[cube]["s0"]))
         mujoco.mj_forward(m, d)
         self.step(0.5)
+        if record:                                     # 姿勢が落ち着いてから録画開始
+            self.frames, self.nstep = [], 0
 
     def _set_cube(self, name, xy):
         j = self.m.joint(name + "_free")
@@ -82,6 +98,28 @@ class Sim:
     def mj_step(self):
         self.d.qfrc_applied[self.gc_v] = self.d.qfrc_bias[self.gc_v]   # 右腕・右手の重力補償
         mujoco.mj_step(self.m, self.d)
+        if self.frames is not None:
+            self.nstep += 1
+            if self.nstep % self.every == 0:
+                self.frames.append(self._frame())
+
+    def _frame(self):
+        """左：横から見た映像、右：頭部カメラ映像（物体が見えている画素数を表示）。"""
+        from PIL import Image, ImageDraw
+        m, d = self.m, self.d
+        self.renderer.update_scene(d, self.cam); side = self.renderer.render()
+        self.renderer.update_scene(d, "head_cam"); head = self.renderer.render()
+        gid = m.geom(self.cube).id
+        def cube_px(opt=None):
+            self.seg.update_scene(d, "head_cam", scene_option=opt); ids = self.seg.render()
+            return int(((ids[..., 0] == gid) & (ids[..., 1] == mujoco.mjtObj.mjOBJ_GEOM)).sum())
+        vis = cube_px()                                  # ロボットに隠された状態で見えている画素
+        no_robot = mujoco.MjvOption(); no_robot.geomgroup[:] = [1, 0, 0, 0, 0, 0]   # ロボット(グループ2,3)を消す
+        full = max(cube_px(no_robot), 1)                 # 隠れがないときの画素＝見え率の分母
+        img = Image.fromarray(np.hstack([side, head])); dr = ImageDraw.Draw(img)
+        dr.text((10, 10), "side view", fill=(255, 255, 255))
+        dr.text((650, 10), f"head camera  cube visible: {vis}/{full} px ({100 * vis / full:.0f}%)", fill=(255, 255, 0))
+        return np.array(img)
 
     def step(self, seconds):
         for _ in range(int(seconds / self.m.opt.timestep)):
@@ -140,14 +178,14 @@ class Sim:
                     if cid in (b1, b2):
                         touch.add(b2 if b1 == cid else b1)
                 if tips <= touch:
-                    hold = s + SQUEEZE
+                    hold = s + PER_SIZE[self.cube]["squeeze"]
             self.set_hand(hand_q(hold if hold is not None else s))
             self.mj_step()
         return hold
 
 
-def trial(cube, seed, pos_noise, verbose=False):
-    sim = Sim(cube, seed, pos_noise)
+def trial(cube, seed, pos_noise, verbose=False, record=False):
+    sim = Sim(cube, seed, pos_noise, record)
     c0 = sim.d.body(cube).xpos.copy()   # 決め打ち：真の位置を使う（成立性の確認なので推定誤差なし）
     errs = [sim.move_arm(c0 + [0, 0, 0.10], 1.5),   # 上空へ
             sim.move_arm(c0, 1.0)]                  # 挟む点を立方体中心へ
@@ -166,7 +204,16 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=10)
     ap.add_argument("--noise", type=float, default=0.02, help="置き位置のばらつき[m]")
+    ap.add_argument("--video", action="store_true", help="各立方体1試行を録画して grasp_<cube>.mp4 に保存")
     a = ap.parse_args()
+    if a.video:
+        import imageio.v2 as imageio
+        for cube in ["cube_50mm", "cube_20mm"]:
+            ok, sim = trial(cube, 0, a.noise, verbose=True, record=True)
+            imageio.mimsave(f"grasp_{cube}.mp4", sim.frames, fps=30)
+            imageio.imwrite(f"grasp_{cube}_lift.png", sim.frames[-1])   # 保持中の最後のコマ
+            print(f"保存: grasp_{cube}.mp4, grasp_{cube}_lift.png")
+        raise SystemExit
     for cube in ["cube_50mm", "cube_20mm"]:
         res = [trial(cube, s, a.noise, verbose=True)[0] for s in range(a.n)]
         print(f"== {cube}: {sum(res)}/{a.n}")
