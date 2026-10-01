@@ -50,8 +50,8 @@ def list_layouts():
 class Show:
     """シミュレーションの1刻みごとに呼ばれ、表示ウィンドウを更新する（または動画のコマを撮る）。"""
 
-    def __init__(self, s, viewer=None, video=None, speed=1.0):
-        self.s, self.viewer, self.speed = s, viewer, speed
+    def __init__(self, s, viewer=None, video=None, speed=1.0, head=None):
+        self.s, self.viewer, self.speed, self.head = s, viewer, speed, head
         self.n, self.t0 = 0, time.time()
         self.touch_pt, self.grasp_pt, self.fronts, self.text = None, None, None, ""
         self.frames = None
@@ -69,8 +69,8 @@ class Show:
 
     def _aim(self, cam):
         c = self.s.c0
-        cam.lookat[:] = [c[0] - 0.01, c[1], c[2] + 0.03]           # 部品のやや上を、ロボットの右手側の斜め前から見る
-        cam.distance, cam.azimuth, cam.elevation = 0.27, 55.0, -14.0
+        cam.lookat[:] = [c[0] - 0.01, c[1], c[2] + 0.08]           # 天板と部品の両方が入るよう、ロボットの右手側の斜め前から見る
+        cam.distance, cam.azimuth, cam.elevation = 0.40, 55.0, -8.0
 
     def markers(self, scn):
         def ball(p, r, rgba):
@@ -122,6 +122,9 @@ class Show:
     def caption(self, img):
         from PIL import Image, ImageDraw
         im = Image.fromarray(img); dr = ImageDraw.Draw(im)
+        if self.head is not None:                        # 右上の小窓：開始時の頭部カメラ（部品のまわりを2倍に拡大）
+            im.paste((255, 255, 255), (960 - 334, 10, 960 - 10, 254)); im.paste(Image.fromarray(self.head), (960 - 332, 12))
+            dr.text((960 - 330, 258), "head camera at start (2x): the shelf hides most of the part", fill=(255, 255, 255))
         for k, line in enumerate(self.text.split("\n")):
             dr.text((12, 10 + 16 * k), line, fill=(255, 255, 255))
         dr.text((12, 544 - 22), "red: touch point   blue: grasp point   yellow: body front edge of each hypothesis",
@@ -129,7 +132,7 @@ class Show:
         return np.array(im)
 
 
-def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.35):
+def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
     """run_touchsel.trial と同じ手順。掴む動作だけは複製でなく本物の状態で行う（表示のため）。"""
     lay = RB.layout(i); rng = np.random.default_rng(5000 + i); rr = np.random.default_rng(9000 + i)
     s = S.ShelfSim(RB.W, visible=lay["vis"], part=(lay["fl"], lay["L"]), dxy=(0, lay["dy"]), yaw_deg=lay["yaw"])
@@ -140,16 +143,24 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.35):
     yaw0 = P.yaw_from_depth(cam, dep, cm, ztab)
     est, _ = P.init_particles_part(cam, cm, occl, RB.W, ztab, rng, (S.X_FRONT, S.Y0), RB.FL_R, RB.L_R, yaw0=yaw0)
     est, seen = P.refine_part_depth(est, cam, dep, cm, ztab, s.front_x, bs.TABLE_TOP_Z + bs.SHELF_H, RB.FL_R, rng)
-    m.geom_rgba[m.geom("board").id, 3] = board_alpha            # 表示だけ天板を半透明に（観測は済んでいるので結果に影響しない）
+    head_img = None
+    if video:                                                    # 動画の小窓用：開始時の頭部カメラの、部品のまわり 160×120 画素
+        hr = mujoco.Renderer(m, 480, 640); hr.update_scene(d, "head_cam"); img = hr.render(); hr.close()
+        u, v = cam.project([s.c0])[0]; x0, y0 = int(np.clip(u - 80, 0, 480)), int(np.clip(v - 60, 0, 360))
+        from PIL import Image
+        head_img = np.array(Image.fromarray(img[y0:y0 + 120, x0:x0 + 160]).resize((320, 240)))
+    # ここから表示だけの設定（観測は済んでいるので結果に影響しない）
+    m.geom_rgba[m.geom("board").id] = [0.78, 0.80, 0.86, board_alpha]   # 天板を明るい半透明に
+    m.vis.headlight.ambient[:] = [0.45, 0.45, 0.45]              # 天板の下面が真っ黒にならないよう、環境光を足す
     m.light_castshadow[:] = 0                                    # 天板の影で部品が見えにくいので、表示では影を消す
 
     head = (f"layout {i}  visible {lay['vis'] * 1000:.0f} mm  flange {lay['fl'] * 1000:.1f} mm  "
             f"body {lay['L'] * 1000:.1f} mm  rule {rule}")
     viewer = None
     if video is None:
-        import mujoco.viewer
-        viewer = mujoco.viewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
-    sh = Show(s, viewer, video, speed)
+        from mujoco import viewer as mjviewer
+        viewer = mjviewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
+    sh = Show(s, viewer, video, speed, head_img)
     if viewer is not None:
         with viewer.lock():
             sh._aim(viewer.cam)
