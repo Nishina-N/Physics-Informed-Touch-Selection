@@ -101,3 +101,8 @@ python run_branch.py 0 2 120 predictor.pkl
 - [17] E. Todorov, T. Erez, Y. Tassa, "MuJoCo: A Physics Engine for Model-Based Control," IROS 2012.
 - [18] MuJoCo Menagerie. https://github.com/google-deepmind/mujoco_menagerie
 - [19] mink. https://github.com/kevinzakka/mink
+
+## 今後の作業（arXiv 投稿前）
+
+- 参考文献 [7] DA-GRD、[9] TACTFUL、[14] Jiang ら、[15] Caddeo ら、[16] DexTacWAM の著者名と arXiv 番号、[10] TactoFind の著者名を原文で補う。
+- 原稿を英語化し、IEEE 会議形式の LaTeX にする。
