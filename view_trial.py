@@ -153,7 +153,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.35):
     if viewer is not None:
         with viewer.lock():
             sh._aim(viewer.cam)
-    sd = lambda e: (e[:, 3]).std() * 1000
+    sd = lambda e: (e[:, 0] + e[:, 3]).std() * 1000              # run_touchsel と同じ「本体の手前の縁のx」のばらつき
     sh.update(est=est, text=f"{head}\nbody seen by camera: {'yes' if seen else 'no'}   "
                             f"body front spread (sd) {sd(est):.1f} mm")
     for k in range(1, n_touch + 1):
