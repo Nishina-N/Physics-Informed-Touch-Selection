@@ -52,7 +52,7 @@ def branch_grasp(s, g):
     s.d = s.sim.d = d0
     S.YAW_DEG = yaw_saved; s.board_hits = hits
     del dc
-    return dict(success=r["success"], moved_mm=None if r["success"] else moved, board=r["board"])
+    return dict(success=r["success"], moved_mm=None if r["success"] else moved, board=r["board"], t_end=r["t_end"])
 
 
 def trial(i, pred=None):
@@ -81,7 +81,8 @@ def trial(i, pred=None):
             (tx, ty), ev = F.choose_touch_m(est, gc_, F.axis_points(est, step=0.003))
             r = s.touch([tx, ty])
             est = F.update(est, tx, ty, r["obs"], rng)
-            step.update(touch_rel_mm=float((tx - front[0]) * 1000), obs=r["obs"], ev=ev, touch_moved_mm=r["moved_mm"])
+            step.update(touch_rel_mm=float((tx - front[0]) * 1000), obs=r["obs"], ev=ev, touch_moved_mm=r["moved_mm"],
+                        touch_moved_total_mm=r["moved_total_mm"])
         steps.append(step)
     out = dict(i=i, **{k: (v * 1000 if k in ("vis", "fl", "L", "dy") else v) for k, v in lay.items()},
                body_seen=seen, body_mm=[lay["fl"] * 1000, (lay["fl"] + lay["L"]) * 1000], steps=steps,
@@ -93,9 +94,10 @@ def trial(i, pred=None):
 if __name__ == "__main__":
     k, n, N = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
     pred = sys.argv[4] if len(sys.argv) > 4 else None
-    os.makedirs("results", exist_ok=True)
+    out_dir = os.environ.get("RESULTS_DIR", "results")             # 結果の置き場所（既定 results）
+    os.makedirs(out_dir, exist_ok=True)
     tag = "branch" if pred else "branch_geom"
-    fn = f"results/{tag}_{k}.jsonl"
+    fn = f"{out_dir}/{tag}_{k}.jsonl"
     done = {json.loads(l)["i"] for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     for i in range(N):

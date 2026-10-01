@@ -50,8 +50,8 @@ def list_layouts():
 class Show:
     """シミュレーションの1刻みごとに呼ばれ、表示ウィンドウを更新する（または動画のコマを撮る）。"""
 
-    def __init__(self, s, viewer=None, video=None, speed=1.0, head=None):
-        self.s, self.viewer, self.speed, self.head = s, viewer, speed, head
+    def __init__(self, s, viewer=None, video=None, speed=1.0, head_crop=None):
+        self.s, self.viewer, self.speed, self.head_crop = s, viewer, speed, head_crop
         self.n, self.t0 = 0, time.time()
         self.touch_pt, self.grasp_pt, self.fronts, self.text = None, None, None, ""
         self.frames = None
@@ -59,6 +59,7 @@ class Show:
             self.frames = []
             s.m.vis.global_.offwidth, s.m.vis.global_.offheight = 960, 544   # 画面外の描画の大きさ（既定は640×480）。高さは動画の符号化に合わせて16の倍数
             self.rd = mujoco.Renderer(s.m, 544, 960)
+            self.hc = mujoco.Renderer(s.m, 480, 640)     # 右上の小窓：頭部カメラの今の映像
             self.every = max(1, round(1 / FPS / s.m.opt.timestep))
         self.cam = mujoco.MjvCamera()
         self._aim(self.cam)
@@ -117,14 +118,21 @@ class Show:
                     time.sleep(lag)
         if self.frames is not None and self.n % self.every == 0:
             self.rd.update_scene(self.s.d, self.cam); self.markers(self.rd.scene)
-            self.frames.append(self.caption(self.rd.render()))
+            img = self.rd.render()
+            m = self.s.m; b = m.geom("board").id; rgba = m.geom_rgba[b].copy()
+            m.geom_rgba[b] = [0.6, 0.6, 0.65, 1.0]      # 頭部カメラには天板を元どおり不透明に描く
+            self.hc.update_scene(self.s.d, "head_cam"); head = self.hc.render()
+            m.geom_rgba[b] = rgba
+            self.frames.append(self.caption(img, head))
 
-    def caption(self, img):
+    def caption(self, img, head=None):
         from PIL import Image, ImageDraw
         im = Image.fromarray(img); dr = ImageDraw.Draw(im)
-        if self.head is not None:                        # 右上の小窓：開始時の頭部カメラ（部品のまわりを2倍に拡大）
-            im.paste((255, 255, 255), (960 - 334, 10, 960 - 10, 254)); im.paste(Image.fromarray(self.head), (960 - 332, 12))
-            dr.text((960 - 330, 258), "head camera at start (2x): the shelf hides most of the part", fill=(255, 255, 255))
+        if head is not None and self.head_crop is not None:   # 右上の小窓：頭部カメラの今の映像（部品のまわりを1.5倍に拡大）
+            x0, y0 = self.head_crop
+            small = Image.fromarray(head[y0:y0 + 160, x0:x0 + 214]).resize((320, 240))
+            im.paste((255, 255, 255), (960 - 334, 10, 960 - 10, 254)); im.paste(small, (960 - 332, 12))
+            dr.text((960 - 330, 258), "head camera (live): the shelf hides most of the part", fill=(255, 255, 255))
         for k, line in enumerate(self.text.split("\n")):
             dr.text((12, 10 + 16 * k), line, fill=(255, 255, 255))
         dr.text((12, 544 - 22), "red: touch point   blue: grasp point   yellow: body front edge of each hypothesis",
@@ -143,12 +151,8 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
     yaw0 = P.yaw_from_depth(cam, dep, cm, ztab)
     est, _ = P.init_particles_part(cam, cm, occl, RB.W, ztab, rng, (S.X_FRONT, S.Y0), RB.FL_R, RB.L_R, yaw0=yaw0)
     est, seen = P.refine_part_depth(est, cam, dep, cm, ztab, s.front_x, bs.TABLE_TOP_Z + bs.SHELF_H, RB.FL_R, rng)
-    head_img = None
-    if video:                                                    # 動画の小窓用：開始時の頭部カメラの、部品のまわり 160×120 画素
-        hr = mujoco.Renderer(m, 480, 640); hr.update_scene(d, "head_cam"); img = hr.render(); hr.close()
-        u, v = cam.project([s.c0])[0]; x0, y0 = int(np.clip(u - 80, 0, 480)), int(np.clip(v - 60, 0, 360))
-        from PIL import Image
-        head_img = np.array(Image.fromarray(img[y0:y0 + 120, x0:x0 + 160]).resize((320, 240)))
+    u, v = cam.project([s.c0])[0]                                # 動画の小窓：頭部カメラの画像で部品のまわり 214×160 画素
+    head_crop = (int(np.clip(u - 107, 0, 640 - 214)), int(np.clip(v - 95, 0, 480 - 160)))
     # ここから表示だけの設定（観測は済んでいるので結果に影響しない）
     m.geom_rgba[m.geom("board").id] = [0.78, 0.80, 0.86, board_alpha]   # 天板を明るい半透明に
     m.vis.headlight.ambient[:] = [0.45, 0.45, 0.45]              # 天板の下面が真っ黒にならないよう、環境光を足す
@@ -160,7 +164,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
     if video is None:
         from mujoco import viewer as mjviewer
         viewer = mjviewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
-    sh = Show(s, viewer, video, speed, head_img)
+    sh = Show(s, viewer, video, speed, head_crop)
     if viewer is not None:
         with viewer.lock():
             sh._aim(viewer.cam)
@@ -189,7 +193,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
               f"{'一致' if same else '不一致'}")
     if video:
         import imageio.v2 as imageio
-        imageio.mimsave(video, sh.frames, fps=FPS); sh.rd.close()
+        imageio.mimsave(video, sh.frames, fps=FPS); sh.rd.close(); sh.hc.close()
         print(f"保存: {video}（{len(sh.frames)} コマ）")
     if viewer is not None:
         print("表示ウィンドウを閉じると終了します")

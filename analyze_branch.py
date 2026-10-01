@@ -1,8 +1,8 @@
 """分岐評価の集計：A（0回）・Bn（n回）・C(τ)（成功確率が初めてτ以上になった時点、上限4回）。"""
-import json, glob, sys
+import json, glob, os, sys
 import numpy as np
 
-pat = sys.argv[1] if len(sys.argv) > 1 else "results/branch_[0-9].jsonl"
+pat = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("RESULTS_DIR", "results") + "/branch_[0-9].jsonl"
 R = [json.loads(l) for f in glob.glob(pat) for l in open(f)]
 R.sort(key=lambda r: r["i"])
 VIS = (10.0, 15.0, 20.0, 25.0)

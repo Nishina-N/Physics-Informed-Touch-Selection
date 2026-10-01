@@ -53,6 +53,7 @@ def trial(i, rule, pred):
         (gx, gy), p = F.best_grasp_m(est, F.axis_points(est))
         res = RB.branch_grasp(s, [gx, gy, ztab + RB.W / 2])
         steps.append(dict(k=k, touch_rel_mm=float((tx - front[0]) * 1000), obs=r["obs"], p=p, **res,
+                          touch_moved_total_mm=r["moved_total_mm"],
                           body_front_sd_mm=float((est[:, 0] + est[:, 3]).std() * 1000)))
     out = dict(i=i, rule=rule, vis=lay["vis"] * 1000, body_mm=[lay["fl"] * 1000, (lay["fl"] + lay["L"]) * 1000],
                body_seen=seen, steps=steps)
@@ -62,7 +63,9 @@ def trial(i, rule, pred):
 
 if __name__ == "__main__":
     k, n, N, pred = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
-    fn = f"results/tsel_{k}.jsonl"
+    out_dir = os.environ.get("RESULTS_DIR", "results")             # 結果の置き場所（既定 results）
+    os.makedirs(out_dir, exist_ok=True)
+    fn = f"{out_dir}/tsel_{k}.jsonl"
     done = {(json.loads(l)["i"], json.loads(l)["rule"]) for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     jobs = [(i, r) for i in range(N) for r in RULES]

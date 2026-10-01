@@ -1,7 +1,7 @@
-import json, glob
+import json, glob, os
 import numpy as np
 from scipy.stats import binomtest
-R = [json.loads(l) for f in glob.glob("results/tsel_*.jsonl") for l in open(f)]
+R = [json.loads(l) for f in glob.glob(os.environ.get("RESULTS_DIR", "results") + "/tsel_*.jsonl") for l in open(f)]
 by = {}
 for r in R:
     by.setdefault(r["i"], {})[r["rule"]] = r

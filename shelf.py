@@ -28,9 +28,12 @@ TOUCH_FLOOR = -0.001    # この高さ（机上）まで下ろす[m]。机に0.1
 TOUCH_YAW = -55.0       # 触るときの手首の鉛直軸まわりの角度[deg]。掴むときと同じ（持ち替えなし）
 MIDDLE_TOUCH = None     # 触る間の中指（middle_0, middle_1）。Noneなら掴むときの開きのまま
 TOUCH_START = 0.010     # 触り始める指先の高さ（物体の上面から）[m]
+DIRECT = True           # 触った後、天板の外へ腕を戻さず、親指も上げたまま、次に触る点・掴む点へそのまま移る
+                        # （False：毎回天板の外へ引いて差し込み直し、触った後に親指を掴む形へ戻す。論文の初版の動き）
 TIP_CENTER = np.array([0.0507, -0.0040, -0.0062])   # 中指の先の中央（指のリンク座標）。物体の真上を触ったときの接触点
 TIP_RADIUS = 0.004      # 接触点が指先の中央からこの距離以内なら「指先の中央で当たり」[m]
 THUMB_UP = (0.72, 0.0)
+THUMB_SEC = 0.8         # DIRECT のとき、親指を上げる・戻すのにかける時間[s]（指令を最小躍度で滑らかに動かす）
 LEFT_ARM = {"left_shoulder_roll_joint": 0.5, "left_elbow_joint": 1.2, "left_wrist_pitch_joint": 0.0}  # 触る間の親指（thumb_1, thumb_2）。中指の先より約33mm上に退避
 
 g.ROLL_DEG, g.PITCH_DEG = -60.0, 10.0
@@ -200,6 +203,20 @@ class ShelfSim:
         p = self.grasp_point()
         self.sim.move_arm(np.array([p[0], p[1], max(p[2], self.c0[2] + PASS_H)]), 1.0)
 
+    def move_hand(self, targets, seconds):
+        """指の目標角を、今の指令値から targets へ最小躍度の補間で seconds かけて動かす。"""
+        sim = self.sim
+        q0 = {j: float(self.d.ctrl[sim.act[j]]) for j in targets}
+        n = max(1, int(seconds / self.m.opt.timestep))
+        for i in range(n):
+            s = (i + 1) / n; s = 10 * s**3 - 15 * s**4 + 6 * s**5
+            sim.set_hand({j: q0[j] + s * (v - q0[j]) for j, v in targets.items()})
+            sim.mj_step()
+
+    def under_board(self):
+        """挟む点が天板の下（前端から5cm以内の手前を含む）にあるか。"""
+        return self.grasp_point()[0] > self.front_x - 0.05
+
     def approach(self, target_xy):
         """天板の手前で、挟む点を target の高さ＋3.5cm に置く（届く帯の中）。"""
         z = self.c0[2] + PASS_H
@@ -239,20 +256,28 @@ class ShelfSim:
         m, d = self.m, self.d
         p_start = d.body(self.cube).xpos.copy()
         self.set_wrist_yaw(TOUCH_YAW)
-        if approach:
+        stay = DIRECT and self.under_board()           # 前に触った所から、天板の下のまま次の点へ移る
+        if approach and not stay:
             self.approach(target_xy)
         # 親指は中指より約5mm低いので、触る間だけ上へ退避させる（中指の形は掴むときと同じ）
         q = g.hand_q(g.PER_SIZE[self.cube]["s0"])
         q["right_hand_thumb_1_joint"], q["right_hand_thumb_2_joint"] = THUMB_UP
         if MIDDLE_TOUCH is not None:                   # 中指を曲げて指先を下に向ける（指の腹が先に当たらないように）
             q["right_hand_middle_0_joint"], q["right_hand_middle_1_joint"] = MIDDLE_TOUCH
-        self.sim.set_hand(q); self.sim.step(0.3)
+        if DIRECT:
+            if not stay:
+                self.move_hand(q, THUMB_SEC)           # 親指をゆっくり上げる（stay のときは上げたまま）
+        else:
+            self.sim.set_hand(q); self.sim.step(0.3)
         off = self._middle_tip() - self.grasp_point()
         z_tab = bs.TABLE_TOP_Z
         top = self.c0[2] + self.size / 2
         start_z = top + TOUCH_START                                 # 指先を上面の少し上へ
         tgt = np.array([target_xy[0], target_xy[1], start_z])
-        self.move_linear(tgt - off, 1.5)
+        if stay:                                       # 今の高さ以上を保って水平に移ってから、触り始める高さへ
+            p = self.grasp_point(); h = max(p[2], (tgt - off)[2])
+            self.move_linear(np.array([(tgt - off)[0], (tgt - off)[1], h]), 1.0)
+        self.move_linear(tgt - off, 1.5 if not stay else 0.5)
         q0 = d.body(self.cube).xquat.copy(); p0 = d.body(self.cube).xpos.copy()
         mb = m.body("right_hand_middle_1_link").id
         hit, clear, loc = None, {"table": 1.0, "cube": 1.0}, None
@@ -284,9 +309,11 @@ class ShelfSim:
                    yaw_deg=float(dq), tip_z_mm=float((tip[2] - z_tab) * 1000),
                    thumb_table_mm=float(clear["table"] * 1000), thumb_cube_mm=float(clear["cube"] * 1000),
                    hit_z_mm=None if hit_z is None else (hit_z - z_tab) * 1000, hit_geom=hit_geom)
-        # 指を2cm上に戻し、親指を掴む形に戻す（次の動作のため）
+        # 指を触り始めの高さへ戻す。DIRECT でなければ親指を掴む形に戻す
         self.move_linear(np.array([tgt[0], tgt[1], start_z]) - off, 0.6, n=12)   # 3点で戻すと関節補間の曲がりで指が部品を約1mm引きずった
-        self.sim.set_hand(g.hand_q(g.PER_SIZE[self.cube]["s0"])); self.sim.step(0.3)
+        if not DIRECT:
+            self.sim.set_hand(g.hand_q(g.PER_SIZE[self.cube]["s0"])); self.sim.step(0.3)
+        res["t_end"] = float(d.time)
         res["moved_total_mm"] = float(np.linalg.norm(d.body(self.cube).xpos[:2] - p_start[:2]) * 1000)   # 近づく・戻る動作も含めた移動
         return res
 
@@ -297,8 +324,15 @@ class ShelfSim:
             g.PER_SIZE[self.cube]["squeeze"] = squeeze
         t = np.asarray(target_xyz, dtype=float)
         self.set_wrist_yaw(GRASP_YAW)
-        errs = [self.approach(t[:2])]
-        errs.append(self.move_linear(t + [0, 0, PASS_H], 1.5))   # 水平に差し込む
+        if DIRECT and self.under_board():
+            # 触った所から天板の下のまま、今の高さ以上を保って挟む点の真上へ移り、差し込む高さで指を掴む形に開く
+            p = self.grasp_point(); h = max(p[2], t[2] + PASS_H)
+            errs = [self.move_linear(np.array([t[0], t[1], h]), 1.0)]
+            errs.append(self.move_linear(t + [0, 0, PASS_H], 0.5))
+            self.move_hand(g.hand_q(g.PER_SIZE[self.cube]["s0"]), THUMB_SEC)   # 親指をゆっくり掴む形へ戻す
+        else:
+            errs = [self.approach(t[:2])]
+            errs.append(self.move_linear(t + [0, 0, PASS_H], 1.5))   # 水平に差し込む
         errs.append(self.move_linear(t, 1.0))                    # 真下に下ろす
         hold = close_each(self.sim, 1.0); self.sim.step(0.3)
         self.move_linear(t + [0, 0, 0.01], 0.5)                          # 1cm浮かせる
@@ -306,5 +340,5 @@ class ShelfSim:
         self.move_linear(np.array([self.front_x - 0.10, t[1], t[2] + 0.06]), 1.0)  # 持ち上げる
         self.sim.step(2.0)                                                  # 2秒保持
         rise = self.d.body(self.cube).xpos[2] - self.c0[2]
-        return dict(success=bool(rise > 0.04), rise_cm=float(rise * 100), closed=hold is not None,
+        return dict(success=bool(rise > 0.04), rise_cm=float(rise * 100), closed=hold is not None, t_end=float(self.d.time),
                     board=sorted(self.board_hits), ik_err_mm=float(max(errs) * 1000))
