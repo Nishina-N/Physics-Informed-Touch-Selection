@@ -49,7 +49,21 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `run_touchsel.py` | 触る点の選び方の比較（voi / unc / rand） |
 | `run_branch.py` | 触る回数の比較（0〜4 回触った時点で掴む分岐を状態の複製で評価） |
 | `analyze_touchsel.py`・`analyze_branch.py` | 論文の表と数値の集計 |
+| `view_trial.py` | 1配置の試行を表示ウィンドウで見る・動画に保存する |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置） |
+
+## 動きを見る
+
+`view_trial.py` は、1配置の試行（見る → 触る → 掴む）を MuJoCo の表示ウィンドウで再生します。
+`run_touchsel.py` と同じ配置・同じ乱数で動かすので、成否は保存済みの結果と一致します（最後に照合して表示）。
+触る点（赤）、掴む点（青）、形の候補ごとの本体の手前の縁（黄）を描きます。
+
+```bash
+uv run python view_trial.py --list                 # voi が成功し unc が失敗した配置の一覧
+uv run python view_trial.py 64 --rule voi          # 表示ウィンドウで見る（Mac は uv run mjpython view_trial.py ...）
+uv run python view_trial.py 64 --rule unc
+uv run python view_trial.py 64 --rule voi --video trial64_voi.mp4   # 動画に保存（表示ウィンドウは開かない）
+```
 
 ## 再現
 
