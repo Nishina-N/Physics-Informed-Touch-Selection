@@ -24,6 +24,30 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 - 触らずに掴むと 72.5%（120 配置）。成功確率が閾値を超えたら触るのをやめる規則は、毎回 1 回触る場合と差がなかった。
 - 触った後は天板の外へ腕を戻さず、親指も上げたまま掴む点へ移る（`shelf.DIRECT`）。掴み終わるまでの時間（中央値）は、1回触る場合 17.7 → 15.2 秒、2回触る場合 24.3 → 17.7 秒に短くなった（毎回腕を戻す動きとの比較、20 配置）。
 
+## 成果物（`docs/`）
+
+| ファイル | 内容 |
+|---|---|
+| `docs/report.pdf` | 提出したレポート（13ページ） |
+| `docs/paper_ja.md` | 論文原稿（日本語）。図は `docs/figures/` を参照 |
+| `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
+| `docs/figures/` | 論文の図1〜4（形の族、触る点の選び方の比較、配置64の3コマ、予測の較正） |
+| `docs/videos/touch_selection.mp4` | 紹介動画（1分36秒） |
+| `docs/videos/trial64_voi.mp4`・`trial64_unc.mp4` | 配置64の試行（提案手法／不確かさ最大） |
+
+図と動画の作り直し（リポジトリの直下で）：
+
+```bash
+uv run python tools/fig_shapes.py docs/figures/fig1_shapes.png       # 図1（数十秒）
+uv run python tools/fig_layout64.py docs/figures/fig3_layout64.png   # 図3（2つの試行を動かすので約5分）
+uv run python view_trial.py 64 --rule voi --video docs/videos/trial64_voi.mp4
+uv run python view_trial.py 64 --rule unc --video docs/videos/trial64_unc.mp4
+uv run python tools/make_video.py                                    # 紹介動画（図1・図2と上の2本から）
+```
+
+図2と図4は論文原稿のグラフ機能で描いたもので、数値は `analyze_touchsel.py`・`analyze_branch.py` の出力です。
+`tools/fig_shapes.py` は元の図を後から作り直したもので、視点や寸法線の位置が少し違います（内容は同じ）。
+
 ## 環境構築
 
 ```bash
@@ -51,6 +75,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `run_branch.py` | 触る回数の比較（0〜4 回触った時点で掴む分岐を状態の複製で評価） |
 | `analyze_touchsel.py`・`analyze_branch.py` | 論文の表と数値の集計 |
 | `view_trial.py` | 1配置の試行を表示ウィンドウで見る・動画に保存する |
+| `tools/` | 図1・図3・紹介動画を作るスクリプト |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置）。`v1_retract/` は毎回腕を戻す前の動きでの結果 |
 
 ## 動きを見る

@@ -6,3 +6,4 @@ data/
 logs/
 scene_g1_cubes.xml
 MUJOCO_LOG.TXT
+!docs/figures/*.png
