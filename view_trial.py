@@ -47,6 +47,12 @@ def list_layouts():
             print(f"{i:4d}  {v['voi']['vis']:4.0f}mm  {mark(s['voi'])}  {mark(s['unc'])}  {mark(s['rand'])}")
 
 
+FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+MW, MH, SW, SH = 720, 540, 304, 228                       # メイン映像と小窓の大きさ
+GAP, TOP = 16, 72                                        # 余白、上の字幕の帯の高さ
+VW, VH = GAP + MW + GAP + SW + GAP, TOP + MH + 28        # 1072×640（16の倍数）
+
+
 class Show:
     """シミュレーションの1刻みごとに呼ばれ、表示ウィンドウを更新する（または動画のコマを撮る）。"""
 
@@ -58,8 +64,11 @@ class Show:
         if video:
             self.frames = []
             s.m.vis.global_.offwidth, s.m.vis.global_.offheight = 960, 544   # 画面外の描画の大きさ（既定は640×480）。高さは動画の符号化に合わせて16の倍数
-            self.rd = mujoco.Renderer(s.m, 544, 960)
+            self.rd = mujoco.Renderer(s.m, MH, MW)       # メイン：ロボット全体と棚が入る横からの映像
+            self.rc = mujoco.Renderer(s.m, SH, SW)       # 右下の小窓：部品のまわりの拡大（触る点・掴む点・形の候補の印）
             self.hc = mujoco.Renderer(s.m, 480, 640)     # 右上の小窓：頭部カメラの今の映像
+            self.wide = mujoco.MjvCamera()
+            self.wide.lookat[:] = [0.2, -0.15, 0.95]; self.wide.distance, self.wide.azimuth, self.wide.elevation = 1.3, -90.0, -15.0
             self.every = max(1, round(1 / FPS / s.m.opt.timestep))
         self.cam = mujoco.MjvCamera()
         self._aim(self.cam)
@@ -117,26 +126,33 @@ class Show:
                 if lag > 0:
                     time.sleep(lag)
         if self.frames is not None and self.n % self.every == 0:
-            self.rd.update_scene(self.s.d, self.cam); self.markers(self.rd.scene)
-            img = self.rd.render()
+            self.rd.update_scene(self.s.d, self.wide); img = self.rd.render()
+            self.rc.update_scene(self.s.d, self.cam); self.markers(self.rc.scene); close = self.rc.render()
             m = self.s.m; b = m.geom("board").id; rgba = m.geom_rgba[b].copy()
             m.geom_rgba[b] = [0.6, 0.6, 0.65, 1.0]      # 頭部カメラには天板を元どおり不透明に描く
             self.hc.update_scene(self.s.d, "head_cam"); head = self.hc.render()
             m.geom_rgba[b] = rgba
-            self.frames.append(self.caption(img, head))
+            self.frames.append(self.caption(img, head, close))
 
-    def caption(self, img, head=None):
-        from PIL import Image, ImageDraw
-        im = Image.fromarray(img); dr = ImageDraw.Draw(im)
-        if head is not None and self.head_crop is not None:   # 右上の小窓：頭部カメラの今の映像（部品のまわりを1.5倍に拡大）
+    def caption(self, img, head=None, close=None):
+        """黒背景の上に、左にメイン映像、その右に重ならないように頭部カメラと部品の拡大の小窓、上に字幕。"""
+        from PIL import Image, ImageDraw, ImageFont
+        font = lambda n: ImageFont.truetype(FONT, n, index=0)
+        im = Image.new("RGB", (VW, VH), (0, 0, 0)); dr = ImageDraw.Draw(im)
+        im.paste(Image.fromarray(img), (GAP, TOP))
+        x2 = GAP + MW + GAP
+        if head is not None and self.head_crop is not None:   # 頭部カメラの今の映像（部品のまわりを拡大）
             x0, y0 = self.head_crop
-            small = Image.fromarray(head[y0:y0 + 160, x0:x0 + 214]).resize((320, 240))
-            im.paste((255, 255, 255), (960 - 334, 10, 960 - 10, 254)); im.paste(small, (960 - 332, 12))
-            dr.text((960 - 330, 258), "head camera (live): the shelf hides most of the part", fill=(255, 255, 255))
+            im.paste(Image.fromarray(head[y0:y0 + 160, x0:x0 + 214]).resize((SW, SH)), (x2, TOP + 24))
+            dr.text((x2, TOP), "頭部カメラ（天板で部品の大半が隠れる）", font=font(15), fill=(220, 220, 220))
+        if close is not None:
+            y = TOP + 24 + SH + 16
+            im.paste(Image.fromarray(close), (x2, y + 24))
+            dr.text((x2, y), "部品のまわりの拡大（天板は半透明）", font=font(15), fill=(220, 220, 220))
+            for k, (txt, col) in enumerate([("赤：触る点　青：掴む点", (230, 230, 230)), ("黄：形の候補ごとの本体の手前の縁", (230, 230, 230))]):
+                dr.text((x2, y + 24 + SH + 6 + 20 * k), txt, font=font(14), fill=col)
         for k, line in enumerate(self.text.split("\n")):
-            dr.text((12, 10 + 16 * k), line, fill=(255, 255, 255))
-        dr.text((12, 544 - 22), "red: touch point   blue: grasp point   yellow: body front edge of each hypothesis",
-                fill=(230, 230, 230))
+            dr.text((GAP, 10 + 28 * k), line, font=font(20 if k else 17), fill=(255, 230, 120) if k else (210, 210, 210))
         return np.array(im)
 
 
@@ -193,7 +209,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
               f"{'一致' if same else '不一致'}")
     if video:
         import imageio.v2 as imageio
-        imageio.mimsave(video, sh.frames, fps=FPS); sh.rd.close(); sh.hc.close()
+        imageio.mimsave(video, sh.frames, fps=FPS); sh.rd.close(); sh.rc.close(); sh.hc.close()
         print(f"保存: {video}（{len(sh.frames)} コマ）")
     if viewer is not None:
         print("表示ウィンドウを閉じると終了します")

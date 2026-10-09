@@ -61,15 +61,15 @@ emit(card("同じ配置で、触る点の選び方だけを変える",
   ("右：不確かさ最大 …… 本体の真ん中（23mm）を触って「当たり」",RED),
   ("　　→ 本体はあると分かるが、手前の縁のばらつきは 4.3mm 残る",RED),
   "","赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁（200個）",
-  "右上の小窓：ロボットの頭部カメラの映像"],step="3 / 5　比較"),9)
+  "左：ロボット全体を横から　右の小窓：上が頭部カメラ、下が部品のまわりの拡大"],step="3 / 5　比較"),9)
 # 5 side-by-side video
 A=[x for x in io.get_reader(VID+"trial64_voi.mp4")]; Bv=[x for x in io.get_reader(VID+"trial64_unc.mp4")]
-n=max(len(A),len(Bv)); cw=630; chh=int(cw*544/960)
+n=max(len(A),len(Bv)); cw=630; chh=int(cw*640/1072)            # 試行の動画（1072×640、黒背景）を縮めて左右に並べる
 for i in range(n):
-    im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
-    d.text((60,34),"3 / 5　比較（実時間）",font=f(22),fill=MUTED)
-    for k,(V,lab,col,res) in enumerate([(A,"提案手法",ACC,"掴めた"),(Bv,"不確かさ最大",RED,"掴み損ねた（部品が落ちる）")]):
-        x=10+k*(cw+0); fr=V[min(i,len(V)-1)]
+    im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
+    d.text((60,34),"3 / 5　比較（実時間）",font=f(22),fill=(170,170,170))
+    for k,(V,lab,col,res) in enumerate([(A,"提案手法",(110,170,255),"掴めた"),(Bv,"不確かさ最大",(255,120,110),"掴み損ねた（部品が落ちる）")]):
+        x=6+k*(cw+8); fr=V[min(i,len(V)-1)]
         im.paste(Image.fromarray(fr).resize((cw,chh)),(x,170))
         d.text((x+10,110),lab,font=f(34,True),fill=col)
         if i>len(V)*0.80: d.text((x+10,170+chh+20),"結果："+res,font=f(32,True),fill=col)

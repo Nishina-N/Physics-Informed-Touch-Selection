@@ -29,7 +29,7 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 | ファイル | 内容 |
 |---|---|
 | `docs/report.pdf` | 提出したレポート（13ページ） |
-| `docs/paper_ja.md` | 論文原稿（日本語）。図は `docs/figures/` を参照 |
+| `docs/paper_ja.md` | レポートの本文（日本語の Markdown）。図は `docs/figures/` を参照 |
 | `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
 | `docs/figures/` | 論文の図1〜4（形の族、触る点の選び方の比較、配置64の3コマ、予測の較正） |
 | `docs/videos/touch_selection.mp4` | 紹介動画（1分36秒） |
@@ -45,7 +45,7 @@ uv run python view_trial.py 64 --rule unc --video docs/videos/trial64_unc.mp4
 uv run python tools/make_video.py                                    # 紹介動画（図1・図2と上の2本から）
 ```
 
-図2と図4は論文原稿のグラフ機能で描いたもので、数値は `analyze_touchsel.py`・`analyze_branch.py` の出力です。
+図2と図4はレポートの文書のグラフ機能で描いたもので、数値は `analyze_touchsel.py`・`analyze_branch.py` の出力です。
 `tools/fig_shapes.py` は元の図を後から作り直したもので、視点や寸法線の位置が少し違います（内容は同じ）。
 
 ## 環境構築
@@ -116,7 +116,7 @@ python run_branch.py 0 2 120 predictor.pkl
 
 ## 参考文献
 
-番号は論文原稿の参考文献に合わせています。
+番号はレポートの参考文献に合わせています。
 
 - [1] L. Rustler et al., "Active Visuo-Haptic Object Shape Completion," RA-L 2022. https://arxiv.org/abs/2203.09149
 - [3] L. Rustler, M. Hoffmann, "ShapeGrasp: Simultaneous Visuo-Haptic Shape Completion and Grasping for Improved Robot Manipulation," 2026. https://arxiv.org/abs/2605.02347
