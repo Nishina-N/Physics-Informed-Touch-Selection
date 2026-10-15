@@ -8,6 +8,8 @@ results/tsel_*.jsonl の同じ配置・同じ規則・同じ回数の成否と�
   見る        : uv run python view_trial.py 64 --rule voi
                 Mac は表示ウィンドウに mjpython が要る : uv run mjpython view_trial.py 64 --rule voi
   動画に保存  : uv run python view_trial.py 64 --rule voi --video trial64_voi.mp4
+  手元の動画  : uv run python view_trial.py 64 --rule voi --close --video trial64_voi_close.mp4
+                （横から手元に寄った映像だけ。部品が机の手前に落ちるところまで入る）
   配置を探す  : uv run python view_trial.py --list
                 （1回触った時点で voi が成功し unc が失敗した配置の一覧）
 """
@@ -51,13 +53,14 @@ FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 MW, MH, SW, SH = 720, 540, 304, 228                       # メイン映像と小窓の大きさ
 GAP, TOP = 16, 72                                        # 余白、上の字幕の帯の高さ
 VW, VH = GAP + MW + GAP + SW + GAP, TOP + MH + 28        # 1072×640（16の倍数）
+CW, CH = 640, 480                                        # --close：手元に寄った映像の大きさ
 
 
 class Show:
     """シミュレーションの1刻みごとに呼ばれ、表示ウィンドウを更新する（または動画のコマを撮る）。"""
 
-    def __init__(self, s, viewer=None, video=None, speed=1.0, head_crop=None):
-        self.s, self.viewer, self.speed, self.head_crop = s, viewer, speed, head_crop
+    def __init__(self, s, viewer=None, video=None, speed=1.0, head_crop=None, close=False):
+        self.s, self.viewer, self.speed, self.head_crop, self.close = s, viewer, speed, head_crop, close
         self.n, self.t0 = 0, time.time()
         self.touch_pt, self.grasp_pt, self.fronts, self.text = None, None, None, ""
         self.frames = None
@@ -65,11 +68,15 @@ class Show:
             self.frames = []
             s.m.vis.global_.offwidth, s.m.vis.global_.offheight = 960, 544   # 画面外の描画の大きさ（既定は640×480）。高さは動画の符号化に合わせて16の倍数
             self.rd = mujoco.Renderer(s.m, MH, MW)       # メイン：ロボット全体と棚が入る横からの映像
-            self.rc = mujoco.Renderer(s.m, SH, SW)       # 右下の小窓：部品のまわりの拡大（触る点・掴む点・形の候補の印）
+            self.rc = mujoco.Renderer(s.m, *((CH, CW) if close else (SH, SW)))   # 右下の小窓：部品のまわりの拡大（--close では横からの手元の映像）
             self.hc = mujoco.Renderer(s.m, 480, 640)     # 右上の小窓：頭部カメラの今の映像
             self.wide = mujoco.MjvCamera()
             self.wide.lookat[:] = [0.2, -0.15, 0.95]; self.wide.distance, self.wide.azimuth, self.wide.elevation = 1.3, -90.0, -15.0
             self.every = max(1, round(1 / FPS / s.m.opt.timestep))
+            if close:                                    # --close：横（ロボットの右側）から手元に寄る。机の手前に落ちる部品まで入る
+                self.side = mujoco.MjvCamera(); c = s.c0
+                self.side.lookat[:] = [c[0] - 0.15, c[1], c[2] - 0.15]
+                self.side.distance, self.side.azimuth, self.side.elevation = 0.8, 90.0, -12.0
         self.cam = mujoco.MjvCamera()
         self._aim(self.cam)
         orig = s.sim.mj_step                            # ShelfSim の1刻み（天板との接触の記録付き）を包む
@@ -125,7 +132,10 @@ class Show:
                 lag = self.n * self.s.m.opt.timestep / self.speed - (time.time() - self.t0)
                 if lag > 0:
                     time.sleep(lag)
-        if self.frames is not None and self.n % self.every == 0:
+        if self.frames is not None and self.n % self.every == 0 and self.close:
+            self.rc.update_scene(self.s.d, self.side); self.markers(self.rc.scene)
+            self.frames.append(self.caption_close(self.rc.render()))
+        elif self.frames is not None and self.n % self.every == 0:
             self.rd.update_scene(self.s.d, self.wide); img = self.rd.render()
             self.rc.update_scene(self.s.d, self.cam); self.markers(self.rc.scene); close = self.rc.render()
             m = self.s.m; b = m.geom("board").id; rgba = m.geom_rgba[b].copy()
@@ -133,6 +143,16 @@ class Show:
             self.hc.update_scene(self.s.d, "head_cam"); head = self.hc.render()
             m.geom_rgba[b] = rgba
             self.frames.append(self.caption(img, head, close))
+
+    def caption_close(self, img):
+        """--close：黒背景に手元の映像、上に字幕（640×560）。"""
+        from PIL import Image, ImageDraw, ImageFont
+        font = lambda n: ImageFont.truetype(FONT, n, index=0)
+        im = Image.new("RGB", (CW, CH + 80), (0, 0, 0)); dr = ImageDraw.Draw(im)
+        im.paste(Image.fromarray(img), (0, 80))
+        for k, line in enumerate(self.text.split("\n")):
+            dr.text((8, 8 + 30 * k), line, font=font(20 if k else 15), fill=(255, 230, 120) if k else (210, 210, 210))
+        return np.array(im)
 
     def caption(self, img, head=None, close=None):
         """黒背景の上に、左にメイン映像、その右に重ならないように頭部カメラと部品の拡大の小窓、上に字幕。"""
@@ -156,7 +176,7 @@ class Show:
         return np.array(im)
 
 
-def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
+def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75, close=False):
     """run_touchsel.trial と同じ手順。掴む動作だけは複製でなく本物の状態で行う（表示のため）。"""
     lay = RB.layout(i); rng = np.random.default_rng(5000 + i); rr = np.random.default_rng(9000 + i)
     s = S.ShelfSim(RB.W, visible=lay["vis"], part=(lay["fl"], lay["L"]), dxy=(0, lay["dy"]), yaw_deg=lay["yaw"])
@@ -180,7 +200,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75):
     if video is None:
         from mujoco import viewer as mjviewer
         viewer = mjviewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
-    sh = Show(s, viewer, video, speed, head_crop)
+    sh = Show(s, viewer, video, speed, head_crop, close=close)
     if viewer is not None:
         with viewer.lock():
             sh._aim(viewer.cam)
@@ -226,8 +246,9 @@ if __name__ == "__main__":
     ap.add_argument("--video", help="動画のファイル名（与えると表示ウィンドウを開かずに保存する）")
     ap.add_argument("--speed", type=float, default=1.0, help="再生の速さ（表示ウィンドウのとき。2なら2倍速）")
     ap.add_argument("--list", action="store_true", help="voi が成功し unc が失敗した配置を一覧する")
+    ap.add_argument("--close", action="store_true", help="動画を、横から手元に寄った映像だけにする（640×560）")
     a = ap.parse_args()
     if a.list:
         list_layouts()
     else:
-        run(a.layout, a.rule, a.touches, a.video, a.speed)
+        run(a.layout, a.rule, a.touches, a.video, a.speed, close=a.close)
