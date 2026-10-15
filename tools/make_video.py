@@ -8,6 +8,7 @@
 import numpy as np, imageio.v2 as io
 from PIL import Image, ImageDraw, ImageFont
 FIG, VID = "docs/figures/", "docs/videos/"
+U = "形の不確かさ最大の場所を触って精度向上"     # 比較の規則（unc）の呼び名
 W,H,FPS=1280,720,30
 R="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"; B="/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 f=lambda s,b=False: ImageFont.truetype(B if b else R,s,index=0)
@@ -49,16 +50,18 @@ emit(card("方法：触った後に「掴める確率」が最も上がる所を
   "② 候補ごとの把持成功確率を小さなニューラルネットで出し、候補で平均",
   "　　（摩擦・質量・指のゲインを振った物理シミュレーション 8,000回で学習）",
   "③ 触る点：触った後に得られる最良の成功確率の期待値が最大の点",
-  ("　　比較：形の不確かさが最大の点（先行研究の基準）、ランダム",MUTED),
+  (f"　　比較：{U}（先行研究の基準）、ランダム",MUTED),
   "④ 中指で上から軽く触る（約10g）→ 天板の下のまま、そのまま掴む",
   "",
   ("u* = argmax_u  Σ_o P(o | u, b) · max_g P(成功 | g, b_{u,o})",ACC)],step="2 / 5　方法"),14)
 # 4 comparison intro
 emit(card("同じ配置で、触る点の選び方だけを変える",
  ["配置64：見えている長さ 10mm、本体は手前から 15〜31mm（カメラからは見えない）",
-  "",("左：提案手法 …… 本体の奥より先（43mm）を触って「外れ」",ACC),
+  ("左：提案手法（掴める確率が最も上がる場所を触る）",ACC),
+  ("　　…… 本体の奥より先（43mm）を触って「外れ」",ACC),
   ("　　→ 本体はそこまで奥にないと分かり、手前の縁のばらつき 5.9 → 2.9mm",ACC),
-  ("右：不確かさ最大 …… 本体の真ん中（23mm）を触って「当たり」",RED),
+  (f"右：{U}",RED),
+  ("　　…… 本体の真ん中（23mm）を触って「当たり」",RED),
   ("　　→ 本体はあると分かるが、手前の縁のばらつきは 4.3mm 残る",RED),
   "","赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁（200個）",
   "左：ロボット全体を横から　右の小窓：上が頭部カメラ、下が部品のまわりの拡大"],step="3 / 5　比較"),9)
@@ -68,17 +71,18 @@ n=max(len(A),len(Bv)); cw=630; chh=int(cw*640/1072)            # 試行の動画
 for i in range(n):
     im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
     d.text((60,34),"3 / 5　比較（実時間）",font=f(22),fill=(170,170,170))
-    for k,(V,lab,col,res) in enumerate([(A,"提案手法",(110,170,255),"掴めた"),(Bv,"不確かさ最大",(255,120,110),"掴み損ねた（部品が落ちる）")]):
+    for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",(110,170,255),"掴めた"),
+                                             (Bv,"比較",U,(255,120,110),"掴み損ねた（部品が落ちる）")]):
         x=6+k*(cw+8); fr=V[min(i,len(V)-1)]
         im.paste(Image.fromarray(fr).resize((cw,chh)),(x,170))
-        d.text((x+10,110),lab,font=f(34,True),fill=col)
+        d.text((x+10,84),lab,font=f(32,True),fill=col); d.text((x+10,128),sub,font=f(24,True),fill=col)
         if i>len(V)*0.80: d.text((x+10,170+chh+20),"結果："+res,font=f(32,True),fill=col)
     out.append_data(np.array(im))
 emit(im,2.5)
 emit(card("提案手法はどこを触っているのか（240配置の1回目）",
  [("提案手法：本体の外（手前の縁の手前側、または奥の縁の先）59%、本体の中ほど 5%",ACC),
   ("　　→ 当たり方（指の腹／フランジ／外れ）で「縁がどちら側にあるか」が分かる",ACC),
-  ("不確かさ最大：本体の外 18%、指先の中央が本体に当たる 73%",RED),
+  (f"{U}：本体の外 18%、指先の中央が本体に当たる 73%",RED),
   ("　　→ 本体があることは分かるが、掴む位置を決める手前の縁は絞れない",RED),
   "",
   "配置64は「奥の縁の先」を触った例。多くの配置では手前の縁の手前側を触る。",
@@ -89,9 +93,10 @@ emit(card("結果：240配置で、1回触った時点の把持成功率",
   foot=None),1/FPS)
 im=card("結果：240配置で、1回触った時点の把持成功率",[],img=FIG+"fig2_touch_rule.png",img_box=(60,120,1220,545),step="4 / 5　結果")
 d=ImageDraw.Draw(im)
-d.text((70,565),"提案手法 95.4%　不確かさ最大 88.8%　ランダム 88.8%",font=f(30,True),fill=FG)
-d.text((70,612),"同じ配置どうしの差 +6.7ポイント（95%区間 [+2.1, +11.3]、McNemar p = 0.005）。見えにくいほど差が大きい（10mmで +15.0）。",font=f(22),fill=MUTED)
-d.text((70,648),"触らずに掴むと 72.5%。失敗した把持の9割で部品が10mm以上動く（掴み直しが難しい）。",font=f(22),fill=MUTED)
+d.text((70,565),f"提案手法 95.4%　{U} 88.8%　ランダム 88.8%",font=f(28,True),fill=FG)
+d.text((70,608),"同じ配置どうしの差 +6.7ポイント（95%区間 [+2.1, +11.3]、McNemar p = 0.005）。",font=f(21),fill=MUTED)
+d.text((70,638),"見えにくいほど差が大きい（10mmで +15.0）。触らずに掴むと 72.5%。",font=f(21),fill=MUTED)
+d.text((70,668),"失敗した把持の9割で部品が10mm以上動く（掴み直しが難しい）。",font=f(21),fill=MUTED)
 emit(im,14)
 # 7 other findings + conclusion
 emit(card("わかったこと",
