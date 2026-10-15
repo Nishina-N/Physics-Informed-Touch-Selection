@@ -2,7 +2,7 @@
 「① 触る」「② 挟む」「③ 引き出して持ち上げる」の3コマを抜き出して並べる。
 
 使い方（リポジトリの直下で。2つの試行を動かすので数分かかる）:
-  uv run python tools/fig_layout64.py docs/figures/fig_layout64.png
+  uv run python tools/fig_layout64.py docs/figures/fig3_layout64.png
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -27,11 +27,12 @@ def aim(self, cam):                                   # 部品のまわりに寄
 def record(rule):
     """1回触って掴む試行を動かし、各コマの画像（文字なし）・説明文・中指の先の高さ・部品の高さを返す。"""
     rec = []
-    def caption(self, img, head=None):
+    def caption(self, img, head=None, close=None):     # 図には部品のまわりに寄った映像（close）だけを使う
         s = self.s
-        rec.append((img.copy(), self.text, float(s._middle_tip()[2]), float(s.d.body(s.cube).xpos[2])))
-        return img
+        rec.append((close.copy(), self.text, float(s._middle_tip()[2]), float(s.d.body(s.cube).xpos[2])))
+        return close
     V.Show._aim, V.Show.caption = aim, caption
+    V.SW, V.SH = 960, 544                              # 寄った映像を図の大きさ（960×544）で描く
     tmp = f"/tmp/_layout{LAYOUT}_{rule}.mp4"
     ok = V.run(LAYOUT, rule, 1, video=tmp)
     os.remove(tmp)
@@ -59,7 +60,7 @@ def main(out):
     fig = Image.new("RGB", (W, H), "white"); dr = ImageDraw.Draw(fig)
     for k, lab in enumerate(["① 触る（中指で上から）", "② 挟む", "③ 引き出して持ち上げる"]):
         dr.text((70 + k * cw, 14), lab, font=font(28, True), fill=(0, 0, 0))
-    for r, ((frames, ok), name, col) in enumerate(zip(rows, ["提案手法", "不確かさ最大"], [BLUE, RED])):
+    for r, ((frames, ok), name, col) in enumerate(zip(rows, ["提案手法", "形の不確かさ最大の場所を触って精度向上"], [BLUE, RED])):
         y = 50 + r * (ch + 10)
         for k, f in enumerate(frames):
             fig.paste(Image.fromarray(f).resize((cw, ch)), (60 + k * cw, y))
@@ -68,8 +69,9 @@ def main(out):
         x1 = 60 + 3 * cw - 10
         dr.rectangle([x1 - tw - 16, y + 10, x1, y + 54], fill="white")
         dr.text((x1 - tw - 8, y + 14), msg, font=font(28, True), fill=col)
+        fs = min(28, int((ch - 16) / len(name)))          # 長い呼び名は字を小さくして縦の帯に収める
         lab = Image.new("RGB", (ch, 50), "white"); ImageDraw.Draw(lab).text(
-            (ch / 2 - 14 * len(name), 6), name, font=font(28, True), fill=(0, 0, 0))
+            ((ch - fs * len(name)) / 2, 6 + (28 - fs) // 2), name, font=font(fs, True), fill=(0, 0, 0))
         fig.paste(lab.rotate(90, expand=True), (5, y))
     dr.text((60, H - 34), "赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁（200個）　　配置64、見えている長さ10mm",
             font=font(22), fill=(80, 80, 80))
