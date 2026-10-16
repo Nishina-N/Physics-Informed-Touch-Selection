@@ -1,9 +1,9 @@
-"""紹介動画（docs/videos/touch_selection.mp4、1分54秒）を作る。説明のカードと、配置64の2つの試行の動画を並べる。
+"""紹介動画（docs/videos/touch_selection.mp4、2分12秒）を作る。説明のカードと、配置64の2つの試行の動画を並べる。
 
 使い方（リポジトリの直下で）:
   uv run python tools/make_video.py
-材料：docs/figures/fig1_shapes.png・fig2_touch_rule.png、docs/videos/trial64_voi.mp4・trial64_unc.mp4（全体）・trial64_voi_close.mp4・trial64_unc_close.mp4（手元）
-（試行の動画は view_trial.py 64 --rule voi --video ...、手元は --close を足して作り直せる）。フォントは Noto Sans CJK。
+材料：docs/figures/fig1_shapes.png・fig2_touch_rule.png、docs/videos/trial64_voi.mp4・trial64_unc.mp4（全体）・trial64_voi_close.mp4・trial64_unc_close.mp4（手元）・trial64_*_macro.mp4（指先）
+（試行の動画は view_trial.py 64 --rule voi --video ...、手元は --close、指先は --macro を足して作り直せる）。フォントは Noto Sans CJK。
 """
 import numpy as np, imageio.v2 as io
 from PIL import Image, ImageDraw, ImageFont
@@ -79,12 +79,14 @@ for i in range(n):
         if i>len(V)*0.80: d.text((x+10,170+chh+20),"結果："+res,font=f(32,True),fill=col)
     out.append_data(np.array(im))
 emit(im,2.5)
-# 5b 手元のアップ（横から、部品が机の手前に落ちるところまで入る）
-A=[x for x in io.get_reader(VID+"trial64_voi_close.mp4")]; Bv=[x for x in io.get_reader(VID+"trial64_unc_close.mp4")]
-n=max(len(A),len(Bv)); cw=560; chh=int(cw*560/640)
-for i in range(n):
+# 5b 手元のアップ（横から、部品が机の手前に落ちるところまで入る）、5c 指先のアップ（どこを触ったか）
+for tag,head in (("close","3 / 5　比較：手元のアップ（横から、実時間）"),
+                 ("macro","3 / 5　比較：指先のアップ（実時間）　赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁")):
+  A=[x for x in io.get_reader(VID+f"trial64_voi_{tag}.mp4")]; Bv=[x for x in io.get_reader(VID+f"trial64_unc_{tag}.mp4")]
+  n=max(len(A),len(Bv)); cw=560; chh=int(cw*560/640)
+  for i in range(n):
     im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
-    d.text((60,34),"3 / 5　比較：手元のアップ（横から、実時間）",font=f(22),fill=(170,170,170))
+    d.text((60,34),head,font=f(22),fill=(170,170,170))
     for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",(110,170,255),"掴めた"),
                                              (Bv,"比較",U,(255,120,110),"掴み損ねた（部品が落ちる）")]):
         x=40+k*(cw+80); fr=V[min(i,len(V)-1)]
@@ -92,7 +94,7 @@ for i in range(n):
         d.text((x,80),lab,font=f(30,True),fill=col); d.text((x,122),sub,font=f(22,True),fill=col)
         if i>len(V)*0.80: d.text((x,165+chh+8),"結果："+res,font=f(28,True),fill=col)
     out.append_data(np.array(im))
-emit(im,2.5)
+  emit(im,2.5)
 emit(card("提案手法はどこを触っているのか（240配置の1回目）",
  [("提案手法：本体の外（手前の縁の手前側、または奥の縁の先）59%、本体の中ほど 5%",ACC),
   ("　　→ 当たり方（指の腹／フランジ／外れ）で「縁がどちら側にあるか」が分かる",ACC),

@@ -32,9 +32,10 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 | `docs/paper_ja.md` | レポートの本文（日本語の Markdown）。図は `docs/figures/` を参照 |
 | `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
 | `docs/figures/` | 論文の図1〜4（形の族、触る点の選び方の比較、配置64の3コマ、予測の較正） |
-| `docs/videos/touch_selection.mp4` | 紹介動画（1分54秒） |
+| `docs/videos/touch_selection.mp4` | 紹介動画（2分12秒） |
 | `docs/videos/trial64_voi.mp4`・`trial64_unc.mp4` | 配置64の試行（提案手法／形の不確かさ最大の場所を触って精度向上） |
 | `docs/videos/trial64_voi_close.mp4`・`trial64_unc_close.mp4` | 同じ試行の手元のアップ（横から。部品が机の手前に落ちるところまで入る） |
+| `docs/videos/trial64_voi_macro.mp4`・`trial64_unc_macro.mp4` | 同じ試行の指先のアップ（どこを触ったかが分かる） |
 
 図と動画の作り直し（リポジトリの直下で）：
 
@@ -45,6 +46,8 @@ uv run python view_trial.py 64 --rule voi --video docs/videos/trial64_voi.mp4
 uv run python view_trial.py 64 --rule unc --video docs/videos/trial64_unc.mp4
 uv run python view_trial.py 64 --rule voi --close --video docs/videos/trial64_voi_close.mp4
 uv run python view_trial.py 64 --rule unc --close --video docs/videos/trial64_unc_close.mp4
+uv run python view_trial.py 64 --rule voi --macro --video docs/videos/trial64_voi_macro.mp4
+uv run python view_trial.py 64 --rule unc --macro --video docs/videos/trial64_unc_macro.mp4
 uv run python tools/make_video.py                                    # 紹介動画（図1・図2と上の2本から）
 ```
 
