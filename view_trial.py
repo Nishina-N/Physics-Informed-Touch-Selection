@@ -10,6 +10,8 @@ results/tsel_*.jsonl の同じ配置・同じ規則・同じ回数の成否と�
   動画に保存  : uv run python view_trial.py 64 --rule voi --video trial64_voi.mp4
   手元の動画  : uv run python view_trial.py 64 --rule voi --close --video trial64_voi_close.mp4
                 （横から手元に寄った映像だけ。部品が机の手前に落ちるところまで入る）
+  指先の動画  : uv run python view_trial.py 64 --rule voi --macro --video trial64_voi_macro.mp4
+                （部品と指先にさらに寄った映像だけ。どこを触ったかが分かる）
   配置を探す  : uv run python view_trial.py --list
                 （1回触った時点で voi が成功し unc が失敗した配置の一覧）
 """
@@ -59,7 +61,8 @@ CW, CH = 640, 480                                        # --close：手元に�
 class Show:
     """シミュレーションの1刻みごとに呼ばれ、表示ウィンドウを更新する（または動画のコマを撮る）。"""
 
-    def __init__(self, s, viewer=None, video=None, speed=1.0, head_crop=None, close=False):
+    def __init__(self, s, viewer=None, video=None, speed=1.0, head_crop=None, close=False, macro=False):
+        close = close or macro
         self.s, self.viewer, self.speed, self.head_crop, self.close = s, viewer, speed, head_crop, close
         self.n, self.t0 = 0, time.time()
         self.touch_pt, self.grasp_pt, self.fronts, self.text = None, None, None, ""
@@ -77,6 +80,9 @@ class Show:
                 self.side = mujoco.MjvCamera(); c = s.c0
                 self.side.lookat[:] = [c[0] - 0.15, c[1], c[2] - 0.15]
                 self.side.distance, self.side.azimuth, self.side.elevation = 0.8, 90.0, -12.0
+                if macro:                                # --macro：部品と指先に寄る（右手側の斜め前、少し上から）
+                    self.side.lookat[:] = [c[0] + 0.01, c[1], c[2] + 0.005]
+                    self.side.distance, self.side.azimuth, self.side.elevation = 0.16, 60.0, -22.0
         self.cam = mujoco.MjvCamera()
         self._aim(self.cam)
         orig = s.sim.mj_step                            # ShelfSim の1刻み（天板との接触の記録付き）を包む
@@ -176,7 +182,7 @@ class Show:
         return np.array(im)
 
 
-def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75, close=False):
+def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75, close=False, macro=False):
     """run_touchsel.trial と同じ手順。掴む動作だけは複製でなく本物の状態で行う（表示のため）。"""
     lay = RB.layout(i); rng = np.random.default_rng(5000 + i); rr = np.random.default_rng(9000 + i)
     s = S.ShelfSim(RB.W, visible=lay["vis"], part=(lay["fl"], lay["L"]), dxy=(0, lay["dy"]), yaw_deg=lay["yaw"])
@@ -200,7 +206,7 @@ def run(i, rule, n_touch, video=None, speed=1.0, board_alpha=0.75, close=False):
     if video is None:
         from mujoco import viewer as mjviewer
         viewer = mjviewer.launch_passive(m, d, show_left_ui=False, show_right_ui=False)
-    sh = Show(s, viewer, video, speed, head_crop, close=close)
+    sh = Show(s, viewer, video, speed, head_crop, close=close, macro=macro)
     if viewer is not None:
         with viewer.lock():
             sh._aim(viewer.cam)
@@ -247,8 +253,9 @@ if __name__ == "__main__":
     ap.add_argument("--speed", type=float, default=1.0, help="再生の速さ（表示ウィンドウのとき。2なら2倍速）")
     ap.add_argument("--list", action="store_true", help="voi が成功し unc が失敗した配置を一覧する")
     ap.add_argument("--close", action="store_true", help="動画を、横から手元に寄った映像だけにする（640×560）")
+    ap.add_argument("--macro", action="store_true", help="動画を、部品と指先にさらに寄った映像だけにする（640×560）")
     a = ap.parse_args()
     if a.list:
         list_layouts()
     else:
-        run(a.layout, a.rule, a.touches, a.video, a.speed, close=a.close)
+        run(a.layout, a.rule, a.touches, a.video, a.speed, close=a.close, macro=a.macro)
