@@ -1,8 +1,8 @@
-"""紹介動画（docs/videos/touch_selection.mp4、2分12秒）を作る。説明のカードと、配置64の2つの試行の動画を並べる。
+"""紹介動画（docs/videos/touch_selection.mp4、2分27秒）を作る。説明のカードと、配置64の2つの試行の動画を並べる。
 
 使い方（リポジトリの直下で）:
   uv run python tools/make_video.py
-材料：docs/figures/fig1_shapes.png・fig2_touch_rule.png、docs/videos/trial64_voi.mp4・trial64_unc.mp4（全体）・trial64_voi_close.mp4・trial64_unc_close.mp4（手元）・trial64_*_macro.mp4（指先）
+材料：docs/figures/fig0_pipeline.png・fig1_shapes.png・fig2_touch_rule.png、docs/videos/trial64_voi.mp4・trial64_unc.mp4（全体）・trial64_voi_close.mp4・trial64_unc_close.mp4（手元）・trial64_*_macro.mp4（指先）
 （試行の動画は view_trial.py 64 --rule voi --video ...、手元は --close、指先は --macro を足して作り直せる）。フォントは Noto Sans CJK。
 """
 import numpy as np, imageio.v2 as io
@@ -37,13 +37,15 @@ d.text((80,210),"棚の奥で一部が隠れた部品を掴むための",font=f(
 d.text((80,280),"触る点の選択",font=f(48,True),fill=FG)
 d.text((80,370),"物理から学習した成功確率を、形の候補で平均する",font=f(30),fill=MUTED)
 d.text((80,450),"MuJoCo ／ Unitree G1 ＋ Dex3",font=f(26),fill=MUTED)
-d.text((80,600),"Physical AI 講座 最終課題　Nishina",font=f(24),fill=MUTED)
+d.text((80,600),"Physical AI 応用1講座 最終課題",font=f(24),fill=MUTED)
 emit(im,5)
 # 2 problem
 emit(card("問題：奥が見えないと、どこを挟めばよいか分からない",
   ["天板に隠れて、カメラにはフランジの手前しか見えない。下の3つは見た目が同じ。"],
   img=FIG+"fig1_shapes.png",img_box=(60,200,1220,670),step="1 / 5　問題",
   foot="手前に低いフランジ（4mm）、奥に掴める本体。フランジと本体の長さは未知。フランジだけ挟んでも持ち上がらない。"),12)
+# 3a 学習と推論の流れ（ブロック図、tools/fig_pipeline.py）
+emit(Image.open(FIG+"fig0_pipeline.png").convert("RGB").resize((W,H),Image.LANCZOS),15)
 # 3 method
 emit(card("方法：触った後に「掴める確率」が最も上がる所を触る",
  ["① カメラ（領域分割＋深度）で、形の候補を200個つくる",
