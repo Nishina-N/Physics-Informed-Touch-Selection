@@ -82,6 +82,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `run_branch.py` | 触る回数の比較（0〜4 回触った時点で掴む分岐を状態の複製で評価） |
 | `analyze_touchsel.py`・`analyze_branch.py` | 論文の表と数値の集計 |
 | `view_trial.py` | 1配置の試行を表示ウィンドウで見る・動画に保存する |
+| `run_vlm_compare.py` | 部品2つ並びの場面で、触らずに掴む場合と1回触ってから掴む場合を比べる |
 | `vlm_pick.py` | 指示文で取る部品を SmolVLM に選ばせ、選んだ部品を触って掴むデモ（本実験の数字には関わらない） |
 | `tools/` | 図1・図3・紹介動画を作るスクリプト |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置）。`v1_retract/` は毎回腕を戻す前の動きでの結果 |
@@ -113,6 +114,24 @@ uv pip install transformers torch pillow           # GPU を使うなら CUDA �
 uv run python vlm_pick.py --instruct "Pick up the green part."                       # 表示ウィンドウで見る
 uv run python vlm_pick.py --instruct "Pick up the green part." --video vlm_pick.mp4  # 動画に保存
 uv run python vlm_pick.py --answer 2 --video test.mp4    # SmolVLM を使わず答えを手で与えて試す
+```
+
+**比べた結果（`run_vlm_compare.py`、`results/summ_vlmcmp.txt`）**：この2つ並びの場面で、選ばれた部品を
+触らずに頭部カメラの推定だけで掴む（SmolVLM で選んでそのまま掴む）場合と、提案手法で1回触って確かめてから掴む場合を、
+60配置 × 部品2つ＝120回で比べた（部品ごとの隠れたサイズは学習範囲から乱数、同じ観測から両方を評価）。
+
+| 掴み方 | 成功率 |
+|---|---|
+| 触らずに掴む | 75.8% |
+| 1回触って確かめてから掴む | 95.0% |
+
+差は +19.2 ポイント（95% 信頼区間 [+11.7, +26.7]、片方だけ成功 25 対 2、McNemar の正確検定 p < 0.001）。
+見えにくいほど差が大きい（見え方 10mm で 63% 対 93%）。SmolVLM が正しい部品を選べるかはこの比較に含めておらず、
+`vlm_pick.py` で別に確かめる。
+
+```bash
+python3 run_vlm_compare.py 0 2 60 & python3 run_vlm_compare.py 1 2 60 & wait   # 2並列で約6分
+python3 run_vlm_compare.py --summary
 ```
 
 既定のモデルは `HuggingFaceTB/SmolVLM-500M-Instruct`（`--model` で変更、GPU があれば自動で使う）。
