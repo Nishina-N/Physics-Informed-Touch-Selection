@@ -84,12 +84,12 @@ def vlm_image(s, lay):
     uv = cam.project(pts)
     u0, u1 = int(min(uv[:, 0]) - 60), int(max(uv[:, 0]) + 60)
     v0, v1 = int(min(uv[:, 1]) - 70), int(max(uv[:, 1]) + 40)
-    u0, v0 = max(u0, 0), max(v0, 0)
+    u0, v0, u1, v1 = max(u0, 0), max(v0, 0), min(u1, 640), min(v1, 480)   # 画像の外へはみ出さない（はみ出すと引き伸ばされる）
     sc = 3
     im = Image.fromarray(rgb[v0:v1, u0:u1]).resize(((u1 - u0) * sc, (v1 - v0) * sc), Image.LANCZOS)
     d = ImageDraw.Draw(im); font = ImageFont.truetype(V.FONT, 40, index=0)
     for k, (u, v) in enumerate(uv):
-        x, y = (u - u0) * sc, (v - v0) * sc - 80
+        x, y = min((u - u0) * sc, im.width - 26), (v - v0) * sc - 80   # 番号の枠が画像の外に出ないように
         d.rectangle([x - 22, y - 4, x + 22, y + 48], fill=(255, 255, 255), outline=(0, 0, 0), width=2)
         d.text((x - 11, y - 2), str(k + 1), font=font, fill=(0, 0, 0))
     return im

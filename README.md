@@ -83,6 +83,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `analyze_touchsel.py`・`analyze_branch.py` | 論文の表と数値の集計 |
 | `view_trial.py` | 1配置の試行を表示ウィンドウで見る・動画に保存する |
 | `run_vlm_compare.py` | 部品2つ並びの場面で、触らずに掴む場合と1回触ってから掴む場合を比べる |
+| `run_vlm_point.py` | 掴む位置を SmolVLM に選ばせる場合と、予測器・提案手法で選ぶ場合を比べる |
 | `vlm_pick.py` | 指示文で取る部品を SmolVLM に選ばせ、選んだ部品を触って掴むデモ（本実験の数字には関わらない） |
 | `tools/` | 図1・図3・紹介動画を作るスクリプト |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置）。`v1_retract/` は毎回腕を戻す前の動きでの結果 |
@@ -133,6 +134,19 @@ uv run python vlm_pick.py --answer 2 --video test.mp4    # SmolVLM を使わず�
 python3 run_vlm_compare.py 0 2 60 & python3 run_vlm_compare.py 1 2 60 & wait   # 2並列で約6分
 python3 run_vlm_compare.py --summary
 ```
+
+**掴む位置まで SmolVLM に任せる場合（`run_vlm_point.py`）**：同じ120試行で、カメラの推定の平均の部品軸に沿って候補点 A〜F
+（手前の面から 8〜48mm）を画像に描き、SmolVLM に掴む点を選ばせる（学習なし）。腕の動かし方は同じ逆運動学。
+候補点ごとの成否は先にシミュレーションで全部求めてあるので（`results/vlmpoint_*.jsonl`、画像は `results/vlmpoint_img/`）、
+SmolVLM を動かす PC では MuJoCo の計算は要らない。
+
+```bash
+python3 run_vlm_point.py sim 0 2 60 & python3 run_vlm_point.py sim 1 2 60 & wait   # 候補点ごとの成否と画像（2並列で約40分、済み）
+python3 run_vlm_point.py ask           # SmolVLM に答えさせる → results/vlmpoint_answers.jsonl
+python3 run_vlm_point.py summary       # A（SmolVLM）・B（触らずに予測器）・C（触ってから）を比べる
+```
+
+いつも同じ候補点を掴んだときの成功率は A 0%・B 18%・C 57%・D 65%・E 32%・F 1%（候補点のどれかで掴める割合 98.3%）。
 
 比較動画 `docs/videos/vlm_compare.mp4`（約49秒）は、配置0の部品2（触らずに掴むと失敗、1回触ると成功した例）を `vlm_pick.py --touches 0／1` で撮り、`tools/make_vlm_video.py` で左右に並べたもの。SmolVLM の答えは手で与えている（動画内に明記）。
 
