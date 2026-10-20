@@ -134,6 +134,8 @@ python3 run_vlm_compare.py 0 2 60 & python3 run_vlm_compare.py 1 2 60 & wait   #
 python3 run_vlm_compare.py --summary
 ```
 
+比較動画 `docs/videos/vlm_compare.mp4`（約49秒）は、配置0の部品2（触らずに掴むと失敗、1回触ると成功した例）を `vlm_pick.py --touches 0／1` で撮り、`tools/make_vlm_video.py` で左右に並べたもの。SmolVLM の答えは手で与えている（動画内に明記）。
+
 既定のモデルは `HuggingFaceTB/SmolVLM-500M-Instruct`（`--model` で変更、GPU があれば自動で使う）。
 SmolVLM に渡した画像は `vlm_input.png`、問いと答えは `vlm_answer.json` に保存します。
 

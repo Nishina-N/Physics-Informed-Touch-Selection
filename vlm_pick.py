@@ -204,6 +204,7 @@ if __name__ == "__main__":
                     help="左から部品ごとの隠れたサイズ『フランジ長x本体長』[mm]（範囲 フランジ10〜30・本体12〜20）")
     ap.add_argument("--model", default="HuggingFaceTB/SmolVLM-500M-Instruct")
     ap.add_argument("--answer", type=int, choices=(1, 2), help="SmolVLM を使わず、答えの番号を手で与える")
+    ap.add_argument("--touches", type=int, default=1, choices=(0, 1, 2), help="触る回数（0 なら触らずにカメラの推定だけで掴む）")
     ap.add_argument("--video", help="動画のファイル名（与えると表示ウィンドウを開かずに保存する）")
     ap.add_argument("--out", default=".", help="SmolVLM に渡した画像と答えの置き場所")
     a = ap.parse_args()
@@ -228,4 +229,4 @@ if __name__ == "__main__":
     print(json.dumps(rec, ensure_ascii=False))
     if slot is None:
         raise SystemExit(f"SmolVLM の答え「{ans}」から番号を読み取れませんでした")
-    pick(a.layout, slot, colors, sizes, a.instruct, ans, img, a.video, a.out)
+    pick(a.layout, slot, colors, sizes, a.instruct, ans, img, a.video, a.out, a.touches)
