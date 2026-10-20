@@ -87,14 +87,18 @@ def ask(model_name):
     done = {json.loads(l)["img"] for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     model = None
-    for p in sorted(glob.glob(f"{IMG_DIR}/*.png")):
+    imgs = sorted(glob.glob(f"{IMG_DIR}/*.png"))
+    print(f"画像 {len(imgs)} 枚、答え済み {len(done)} 枚", flush=True)
+    if not imgs:
+        raise SystemExit(f"{IMG_DIR} に画像がありません（python3 run_vlm_point.py sim で作る）")
+    for p in imgs:
         name = os.path.basename(p)
         if name in done:
             continue
         q, ans, dev, model = ask_one(Image.open(p).convert("RGB"), model_name, model)
         m = [c for c in ans.upper() if c in LETTERS]
         out.write(json.dumps(dict(img=name, answer=ans, letter=m[0] if m else None, model=model_name, device=dev)) + "\n")
-        out.flush(); print(name, repr(ans))
+        out.flush(); print(name, repr(ans), flush=True)
 
 
 def ask_one(image, model_name, cache):
