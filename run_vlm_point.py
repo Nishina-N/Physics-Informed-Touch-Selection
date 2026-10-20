@@ -12,7 +12,7 @@
   1. シミュレーション（候補点ごとの成否と、SmolVLM に渡す画像）:
        python3 run_vlm_point.py sim k n N        → results/vlmpoint_k.jsonl、results/vlmpoint_img/<配置>_<部品>.png
   2. SmolVLM に答えさせる（GPU があれば使う）:
-       python3 run_vlm_point.py ask [--model HuggingFaceTB/SmolVLM-500M-Instruct]   → results/vlmpoint_answers.jsonl
+       python3 run_vlm_point.py ask [--model HuggingFaceTB/SmolVLM-500M-Instruct]   → results/vlmpoint_answers.jsonl（既定のモデル）、ほかのモデルは results/vlmpoint_answers_<モデル名>.jsonl
   3. 集計:
        python3 run_vlm_point.py summary
 """
@@ -81,9 +81,14 @@ def trial(i, slot):
     return out
 
 
+def answers_file(model_name):
+    tag = model_name.split("/")[-1]
+    return "results/vlmpoint_answers.jsonl" if tag == "SmolVLM-500M-Instruct" else f"results/vlmpoint_answers_{tag}.jsonl"
+
+
 def ask(model_name):
     from PIL import Image
-    fn = "results/vlmpoint_answers.jsonl"
+    fn = answers_file(model_name)
     done = {json.loads(l)["img"] for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     model = None
@@ -124,7 +129,7 @@ def ask_one(image, model_name, cache):
     return QUESTION, ans, dev, cache
 
 
-def summary():
+def summary(model_name):
     R = {(r["i"], r["slot"]): r for f in glob.glob("results/vlmpoint_*.jsonl") if "answers" not in f
          for r in map(json.loads, open(f))}
     Cm = {(r["i"], r["slot"]): r for f in glob.glob("results/vlmcmp_*.jsonl") for r in map(json.loads, open(f))}
@@ -137,7 +142,8 @@ def summary():
     if keys:
         print(f"B 触らずに予測器で選ぶ: {np.mean([Cm[k]['notouch']['success'] for k in keys]) * 100:.1f}%   "
               f"C 1回触ってから選ぶ: {np.mean([Cm[k]['touch']['success'] for k in keys]) * 100:.1f}%  （同じ {len(keys)} 試行）")
-    fn = "results/vlmpoint_answers.jsonl"
+    fn = answers_file(model_name)
+    print(f"モデル: {model_name}")
     if not os.path.exists(fn):
         print("SmolVLM の答えはまだありません（python3 run_vlm_point.py ask）"); return
     A = {json.loads(l)["img"]: json.loads(l) for l in open(fn)}
@@ -172,7 +178,7 @@ if __name__ == "__main__":
     ap.add_argument("--model", default="HuggingFaceTB/SmolVLM-500M-Instruct")
     a = ap.parse_args()
     if a.mode == "summary":
-        summary()
+        summary(a.model)
     elif a.mode == "ask":
         ask(a.model)
     else:
