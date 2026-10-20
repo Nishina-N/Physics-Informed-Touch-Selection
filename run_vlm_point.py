@@ -26,6 +26,13 @@ QUESTION = ("A robot hand will pinch this part from above and lift it. The front
             "hidden under the shelf board. Grasping only the thin flat front lip will not lift the part; the hand must "
             "pinch the taller main body. The letters A to F mark candidate grasp points along the part, from front (A) to "
             "back (F). Which point should the hand grasp? Answer with one letter only.")
+QUESTION_INFORMED = ("A robot hand will pinch this part from above and lift it. The part has a thin flat front lip (flange) "
+                     "that is 10 to 30 mm long, and behind it a taller main body that is 12 to 20 mm long; the exact lengths "
+                     "are unknown because the part is hidden under the shelf board. The hand must pinch the main body, at "
+                     "least about 4 mm inside its front and back edges; pinching the lip will not lift the part. The letters "
+                     "mark points measured from the front edge of the part: A 8 mm, B 16 mm, C 24 mm, D 32 mm, E 40 mm, "
+                     "F 48 mm. Which point is most likely to be on the main body? Answer with one letter only.")
+PROMPTS = {"basic": QUESTION, "informed": QUESTION_INFORMED}
 
 
 def candidates(est, F):
@@ -81,14 +88,14 @@ def trial(i, slot):
     return out
 
 
-def answers_file(model_name):
-    tag = model_name.split("/")[-1]
+def answers_file(model_name, prompt="basic"):
+    tag = model_name.split("/")[-1] + ("" if prompt == "basic" else f"_{prompt}")
     return "results/vlmpoint_answers.jsonl" if tag == "SmolVLM-500M-Instruct" else f"results/vlmpoint_answers_{tag}.jsonl"
 
 
-def ask(model_name):
+def ask(model_name, prompt="basic"):
     from PIL import Image
-    fn = answers_file(model_name)
+    fn = answers_file(model_name, prompt)
     done = {json.loads(l)["img"] for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     model = None
@@ -100,13 +107,13 @@ def ask(model_name):
         name = os.path.basename(p)
         if name in done:
             continue
-        q, ans, dev, model = ask_one(Image.open(p).convert("RGB"), model_name, model)
+        q, ans, dev, model = ask_one(Image.open(p).convert("RGB"), model_name, model, PROMPTS[prompt])
         m = [c for c in ans.upper() if c in LETTERS]
-        out.write(json.dumps(dict(img=name, answer=ans, letter=m[0] if m else None, model=model_name, device=dev)) + "\n")
+        out.write(json.dumps(dict(img=name, answer=ans, letter=m[0] if m else None, model=model_name, prompt=prompt, device=dev)) + "\n")
         out.flush(); print(name, repr(ans), flush=True)
 
 
-def ask_one(image, model_name, cache):
+def ask_one(image, model_name, cache, question=QUESTION):
     import torch, transformers
     from transformers import AutoProcessor
     from packaging.version import Version
@@ -120,16 +127,16 @@ def ask_one(image, model_name, cache):
         kw = {"dtype": dtype} if Version(transformers.__version__) >= Version("4.56") else {"torch_dtype": dtype}
         cache = (AutoProcessor.from_pretrained(model_name), AutoVLM.from_pretrained(model_name, **kw).to(dev).eval())
     proc, model = cache
-    msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": QUESTION}]}]
+    msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": question}]}]
     prompt = proc.apply_chat_template(msgs, add_generation_prompt=True)
     inputs = proc(text=prompt, images=[image], return_tensors="pt").to(dev)
     with torch.no_grad():
         o = model.generate(**inputs, max_new_tokens=6, do_sample=False)
     ans = proc.batch_decode(o[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
-    return QUESTION, ans, dev, cache
+    return question, ans, dev, cache
 
 
-def summary(model_name):
+def summary(model_name, prompt="basic"):
     R = {(r["i"], r["slot"]): r for f in glob.glob("results/vlmpoint_*.jsonl") if "answers" not in f
          for r in map(json.loads, open(f))}
     Cm = {(r["i"], r["slot"]): r for f in glob.glob("results/vlmcmp_*.jsonl") for r in map(json.loads, open(f))}
@@ -142,8 +149,8 @@ def summary(model_name):
     if keys:
         print(f"B 触らずに予測器で選ぶ: {np.mean([Cm[k]['notouch']['success'] for k in keys]) * 100:.1f}%   "
               f"C 1回触ってから選ぶ: {np.mean([Cm[k]['touch']['success'] for k in keys]) * 100:.1f}%  （同じ {len(keys)} 試行）")
-    fn = answers_file(model_name)
-    print(f"モデル: {model_name}")
+    fn = answers_file(model_name, prompt)
+    print(f"モデル: {model_name}　問い: {prompt}")
     if not os.path.exists(fn):
         print("SmolVLM の答えはまだありません（python3 run_vlm_point.py ask）"); return
     A = {json.loads(l)["img"]: json.loads(l) for l in open(fn)}
@@ -176,11 +183,13 @@ if __name__ == "__main__":
     ap.add_argument("mode", choices=("sim", "ask", "summary"))
     ap.add_argument("args", nargs="*")
     ap.add_argument("--model", default="HuggingFaceTB/SmolVLM-500M-Instruct")
+    ap.add_argument("--prompt", default="basic", choices=tuple(PROMPTS),
+                    help="basic：形の知識なし。informed：フランジと本体の長さの範囲、候補点の距離、挟む余裕を文で与える")
     a = ap.parse_args()
     if a.mode == "summary":
-        summary(a.model)
+        summary(a.model, a.prompt)
     elif a.mode == "ask":
-        ask(a.model)
+        ask(a.model, a.prompt)
     else:
         k, n, N = map(int, a.args)
         os.makedirs("results", exist_ok=True)
