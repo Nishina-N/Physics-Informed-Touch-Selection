@@ -82,6 +82,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `run_branch.py` | 触る回数の比較（0〜4 回触った時点で掴む分岐を状態の複製で評価） |
 | `analyze_touchsel.py`・`analyze_branch.py` | 論文の表と数値の集計 |
 | `view_trial.py` | 1配置の試行を表示ウィンドウで見る・動画に保存する |
+| `vlm_pick.py` | 指示文で取る部品を SmolVLM に選ばせ、選んだ部品を触って掴むデモ（本実験の数字には関わらない） |
 | `tools/` | 図1・図3・紹介動画を作るスクリプト |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置）。`v1_retract/` は毎回腕を戻す前の動きでの結果 |
 
@@ -97,6 +98,23 @@ uv run python view_trial.py 64 --rule voi          # 表示ウィンドウで見
 uv run python view_trial.py 64 --rule unc
 uv run python view_trial.py 64 --rule voi --video trial64_voi.mp4   # 動画に保存（表示ウィンドウは開かない）
 ```
+
+## 指示文で取る部品を選ぶ（SmolVLM との組み合わせ）
+
+`vlm_pick.py` は、棚の下に色の違う部品を2つ並べ（今の位置と右へ 10cm）、指示文（英語）と頭部カメラの画像から
+SmolVLM が「どちらを取るか」を番号で答え、選んだ部品を今の方法で触って掴みます。
+SmolVLM が「何を取るか」、物理から学んだ成功確率が「どこを触ってどこを挟むか」を決める分担です（SayCan と同じ骨組み）。
+左隣 5cm に部品があると手が当たって掴めなかったため、間隔は 10cm にしています。
+
+```bash
+uv pip install transformers torch pillow           # GPU を使うなら CUDA 版の torch
+uv run python vlm_pick.py --instruct "Pick up the green part."                       # 表示ウィンドウで見る
+uv run python vlm_pick.py --instruct "Pick up the green part." --video vlm_pick.mp4  # 動画に保存
+uv run python vlm_pick.py --answer 2 --video test.mp4    # SmolVLM を使わず答えを手で与えて試す
+```
+
+既定のモデルは `HuggingFaceTB/SmolVLM-500M-Instruct`（`--model` で変更、GPU があれば自動で使う）。
+SmolVLM に渡した画像は `vlm_input.png`、問いと答えは `vlm_answer.json` に保存します。
 
 ## 再現
 
