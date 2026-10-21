@@ -65,6 +65,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 ```
 
 学習済みの予測器 `predictor.pkl` は scikit-learn 1.8.0 で保存しています。
+動画・図の字幕に日本語のフォント（Noto Sans CJK）を使います。Ubuntu・WSL では `sudo apt install fonts-noto-cjk` で入れてください。
 画面のない Linux では、カメラの描画に EGL を自動で使います（`build_scene.py` の先頭）。Windows・Mac では設定は不要です。
 
 ## ファイル

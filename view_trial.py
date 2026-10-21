@@ -52,6 +52,9 @@ def list_layouts():
 
 
 FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+import os as _os
+if not _os.path.exists(FONT):                            # 動画の字幕に日本語のフォントを使う
+    print(f"注意：{FONT} がありません。動画に保存するなら sudo apt install fonts-noto-cjk で入れてください")
 MW, MH, SW, SH = 720, 540, 304, 228                       # メイン映像と小窓の大きさ
 GAP, TOP = 16, 72                                        # 余白、上の字幕の帯の高さ
 VW, VH = GAP + MW + GAP + SW + GAP, TOP + MH + 28        # 1072×640（16の倍数）
