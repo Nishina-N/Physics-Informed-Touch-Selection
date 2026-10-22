@@ -165,7 +165,7 @@ python3 run_vlm_point.py summary       # A（SmolVLM）・B（触らずに予測
 予測器（触らない）は 2.2B・知識ありより +14.2 ポイント（片方だけ成功 32 対 15、McNemar p = 0.019）、
 提案手法は +33.3 ポイント（44 対 4、p < 0.001）高い。
 
-比較動画 `docs/videos/vlm_compare.mp4`（約49秒）は、配置0の部品2（触らずに掴むと失敗、1回触ると成功した例）を `vlm_pick.py --touches 0／1` で撮り、`tools/make_vlm_video.py` で左右に並べたもの。SmolVLM の答えは手で与えている（動画内に明記）。
+比較動画 `docs/videos/vlm_compare.mp4`（約49秒）は、配置0・既定のサイズの場面で、SmolVLM-500M が GPU で「2」と答えて1回触ってから掴んだ `docs/videos/vlm_pick.mp4`（成功）と、同じ場面・同じ答えで触らずに掴んだ `docs/videos/vlm_pick_t0.mp4`（失敗）を `tools/make_vlm_video.py` で左右に並べたもの。`vlm_pick_blue.mp4`・`vlm_pick_swap.mp4` は指示文や色の並びを変えて SmolVLM が正しく選んだ例。
 
 既定のモデルは `HuggingFaceTB/SmolVLM-500M-Instruct`（`--model` で変更、GPU があれば自動で使う）。
 SmolVLM に渡した画像は `vlm_input.png`、問いと答えは `vlm_answer.json` に保存します。

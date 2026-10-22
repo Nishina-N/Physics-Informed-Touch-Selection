@@ -1,17 +1,22 @@
 """SmolVLM との組み合わせの比較動画（docs/videos/vlm_compare.mp4）を作る。
 
 材料：vlm_pick.py で作った2本（同じ場面・同じ選択で、触らずに掴む／1回触ってから掴む）と、results/vlmcmp_*.jsonl の集計。
-  uv run python vlm_pick.py --layout 0 --sizes <run_vlm_compare.sizes_for(0)> --answer 2 --touches 0 --video docs/videos/vlm_pick_t0.mp4
-  uv run python vlm_pick.py ...（同じ）--touches 1 --video docs/videos/vlm_pick_t1.mp4
-  uv run python tools/make_vlm_video.py [--answer-note "SmolVLM-500M の答え"]
---answer を手で与えて作った動画なら、そのことを字幕に出す（既定）。SmolVLM で答えさせた動画なら --answer-note を変える。
+今の動画（既定のサイズ 12x19,28x13、配置0）は、右が SmolVLM-500M に GPU で答えさせて撮った docs/videos/vlm_pick.mp4、
+左が同じ場面・同じ答え（2）で触らずに掴んだ docs/videos/vlm_pick_t0.mp4：
+  uv run python vlm_pick.py --answer 2 --touches 0 --video docs/videos/vlm_pick_t0.mp4
+  uv run python tools/make_vlm_video.py --left docs/videos/vlm_pick_t0.mp4 --right docs/videos/vlm_pick.mp4 \
+      --part "緑：フランジ 28mm・本体 13mm" --answer-note "（SmolVLM-500M が GPU で答えた「2」。左の触らない側も同じ場面・同じ答えで動かした）"
 """
 import argparse, glob, json
 import numpy as np, imageio.v2 as io
 from PIL import Image, ImageDraw, ImageFont
 
+VID_DEFAULT = "docs/videos/"
 ap = argparse.ArgumentParser()
 ap.add_argument("--answer-note", default="（この動画では SmolVLM の答えの代わりに番号を手で与えた）")
+ap.add_argument("--left", default=VID_DEFAULT + "vlm_pick_t0.mp4", help="触らずに掴む動画")
+ap.add_argument("--right", default=VID_DEFAULT + "vlm_pick_t1.mp4", help="1回触ってから掴む動画")
+ap.add_argument("--part", default="緑：フランジ 28mm・本体 14mm", help="選んだ部品の隠れたサイズ（字幕）")
 a = ap.parse_args()
 VID = "docs/videos/"
 W, H, FPS = 1280, 720, 30
@@ -49,18 +54,18 @@ im, d = card("SmolVLM ＋ 触る点の選択：指示文で選び、触って確
              step="SmolVLM との組み合わせ")
 emit(im, 12)
 # 2 SmolVLM の入力と答え（vlm_pick の最初の画面をそのまま使う）
-A = [x for x in io.get_reader(VID + "vlm_pick_t1.mp4")]
+A = [x for x in io.get_reader(a.right)]
 hh = H - 50; im = Image.fromarray(A[0]).resize((int(hh * A[0].shape[1] / A[0].shape[0]), hh))
 canvas = Image.new("RGB", (W, H), (0, 0, 0)); canvas.paste(im, ((W - im.width) // 2, 0))
 ImageDraw.Draw(canvas).text(((W - im.width) // 2 + 16, H - 40), a.answer_note, font=f(20), fill=(200, 200, 200))
 emit(canvas, 7)
 # 3 左右に並べる（vlm_pick の最初の6秒の画面は除く）
 skip = 6 * FPS
-L = [x for x in io.get_reader(VID + "vlm_pick_t0.mp4")][skip:]; Rv = A[skip:]
+L = [x for x in io.get_reader(a.left)][skip:]; Rv = A[skip:]
 n = max(len(L), len(Rv)); cw = 630; chh = int(cw * 640 / 1072)
 for i in range(n):
     im = Image.new("RGB", (W, H), (0, 0, 0)); d = ImageDraw.Draw(im)
-    d.text((60, 34), "同じ場面・同じ部品（緑：フランジ 28mm・本体 14mm、カメラには見えない）　実時間", font=f(22), fill=(170, 170, 170))
+    d.text((60, 34), f"同じ場面・同じ部品（{a.part}、カメラには見えない）　実時間", font=f(22), fill=(170, 170, 170))
     for k, (V, lab, sub, col, res) in enumerate([(L, "SmolVLM で選んでそのまま掴む", "触らずに、カメラの推定だけで掴む点を選ぶ", (255, 120, 110), "掴み損ねた"),
                                                   (Rv, "SmolVLM ＋ 提案手法", "1回触って隠れたサイズを確かめてから掴む", (110, 170, 255), "掴めた")]):
         x = 6 + k * (cw + 8); fr = V[min(i, len(V) - 1)]
