@@ -32,7 +32,7 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 | `docs/paper_ja.md` | レポートの本文（日本語の Markdown）。図は `docs/figures/` を参照 |
 | `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
 | `docs/figures/` | レポートの図1〜5。`fig1_shapes`＝図1（形の族）、`fig0_pipeline`＝図2（学習と推論の流れのブロック図）、`fig2_touch_rule`＝図3（触る点の選び方の比較）、`fig3_layout64`＝図4（配置64の3コマ）、`fig4_calibration`＝図5（予測の較正）。ファイル名の番号はブロック図を足す前のもの |
-| `docs/videos/touch_selection.mp4` | 紹介動画（2分27秒） |
+| `docs/videos/touch_selection.mp4` | 提出用の動画（2分56秒。5/6 に SmolVLM との組み合わせ） |
 | `docs/videos/trial64_voi.mp4`・`trial64_unc.mp4` | 配置64の試行（提案手法／形の不確かさ最大の場所を触って精度向上） |
 | `docs/videos/trial64_voi_close.mp4`・`trial64_unc_close.mp4` | 同じ試行の手元のアップ（横から。部品が机の手前に落ちるところまで入る） |
 | `docs/videos/trial64_voi_macro.mp4`・`trial64_unc_macro.mp4` | 同じ試行の指先のアップ（どこを触ったかが分かる） |
@@ -49,7 +49,7 @@ uv run python view_trial.py 64 --rule voi --close --video docs/videos/trial64_vo
 uv run python view_trial.py 64 --rule unc --close --video docs/videos/trial64_unc_close.mp4
 uv run python view_trial.py 64 --rule voi --macro --video docs/videos/trial64_voi_macro.mp4
 uv run python view_trial.py 64 --rule unc --macro --video docs/videos/trial64_unc_macro.mp4
-uv run python tools/make_video.py                                    # 紹介動画（図1〜3と上の試行の動画から）
+uv run python tools/make_video.py                                    # 提出用の動画（図1〜3、上の試行の動画、vlm_pick.mp4・vlm_pick_t0.mp4 から）
 ```
 
 図3と図5はレポートの文書のグラフ機能で描いたもので、数値は `analyze_touchsel.py`・`analyze_branch.py` の出力です。
