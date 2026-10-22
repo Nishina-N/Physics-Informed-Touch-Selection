@@ -72,7 +72,7 @@ def render_part(fl, lb):
 
 
 def main(out):
-    W, H = 1720, 750
+    W, H = 1720, 790
     fig = Image.new("RGB", (W, H), "white"); dr = ImageDraw.Draw(fig)
     for k, (fl, lb) in enumerate(PARTS):
         img, head, a = render_part(fl, lb)
@@ -91,21 +91,21 @@ def main(out):
             di.line([p, q], fill=(0, 0, 0), width=2)
             for r in (p, q):
                 di.line([(r[0], r[1] - 7), (r[0], r[1] + 7)], fill=(0, 0, 0), width=2)
-            di.text(((p[0] + q[0]) / 2 - 30, (p[1] + q[1]) / 2 + 4), lab, font=font(22), fill=(0, 0, 0))
+            di.text(((p[0] + q[0]) / 2 - 30, (p[1] + q[1]) / 2 + 4), lab, font=font(30), fill=(0, 0, 0))
         dim(a["f0"], a["f1"], f"ℓ_f={fl * 1000:.0f}", 22)
         dim(a["f1"], a["b1"], f"ℓ_b={lb * 1000:.0f}", 22)
-        im = im.crop((0, 60, 800, 574)).resize((560, 360))
-        fig.paste(im, (20 + 560 * k, 60))
+        im = im.crop((0, 60, 800, 574)).resize((480, 309))
+        fig.paste(im, (60 + 560 * k, 60))
         dr.text((30 + 560 * k, 18), f"({'abc'[k]}) 本体の長さ {lb * 1000:.0f}mm（フランジ {fl * 1000:.0f}mm）",
                 font=font(24, True), fill=(0, 0, 0))
         # 頭部カメラ：部品のまわりを切り出して拡大
         h = Image.fromarray(head)
         pu, pv = a["head"]                                      # 部品の中心の画素（640×480 の画像）
-        x0 = int(np.clip(pu - 107, 0, 640 - 214)); y0 = int(np.clip(pv - 95, 0, 480 - 160))
-        crop = h.crop((x0, y0, x0 + 214, y0 + 160)).resize((320, 240))
-        fig.paste(crop, (140 + 560 * k, 470))
-    dr.text((30, 436), "↓ 頭部カメラから見ると（部品のまわりを拡大）：3つとも同じに見える", font=font(24, True), fill=(0, 0, 0))
-    dr.text((24, 718), "点線より奥（網掛け）は天板に隠れてカメラから見えない（見えている長さ 10mm）。寸法の単位は mm。",
+        x0 = int(np.clip(pu - 64, 0, 640 - 128)); y0 = int(np.clip(pv - 28, 0, 480 - 80))   # 上の図と同じくらいの大きさで見えるよう、狭く切り出す
+        crop = h.crop((x0, y0, x0 + 128, y0 + 80)).resize((480, 300), Image.LANCZOS)
+        fig.paste(crop, (60 + 560 * k, 430))
+    dr.text((30, 386), "↓ 頭部カメラから見ると（部品のまわりを拡大）：3つとも同じに見える", font=font(24, True), fill=(0, 0, 0))
+    dr.text((24, 750), "点線より奥（網掛け）は天板に隠れてカメラから見えない（見えている長さ 10mm）。寸法の単位は mm。",
             font=font(21), fill=(80, 80, 80))
     fig.save(out); print("保存:", out)
 
