@@ -157,31 +157,31 @@ class Show:
         """--close：黒背景に手元の映像、上に字幕（640×560）。"""
         from PIL import Image, ImageDraw, ImageFont
         font = lambda n: ImageFont.truetype(FONT, n, index=0)
-        im = Image.new("RGB", (CW, CH + 80), (0, 0, 0)); dr = ImageDraw.Draw(im)
+        im = Image.new("RGB", (CW, CH + 80), (250, 250, 248)); dr = ImageDraw.Draw(im)
         im.paste(Image.fromarray(img), (0, 80))
         for k, line in enumerate(self.text.split("\n")):
-            dr.text((8, 8 + 30 * k), line, font=font(20 if k else 15), fill=(255, 230, 120) if k else (210, 210, 210))
+            dr.text((8, 8 + 30 * k), line, font=font(20 if k else 15), fill=(30, 95, 170) if k else (95, 100, 105))
         return np.array(im)
 
     def caption(self, img, head=None, close=None):
         """黒背景の上に、左にメイン映像、その右に重ならないように頭部カメラと部品の拡大の小窓、上に字幕。"""
         from PIL import Image, ImageDraw, ImageFont
         font = lambda n: ImageFont.truetype(FONT, n, index=0)
-        im = Image.new("RGB", (VW, VH), (0, 0, 0)); dr = ImageDraw.Draw(im)
+        im = Image.new("RGB", (VW, VH), (250, 250, 248)); dr = ImageDraw.Draw(im)
         im.paste(Image.fromarray(img), (GAP, TOP))
         x2 = GAP + MW + GAP
         if head is not None and self.head_crop is not None:   # 頭部カメラの今の映像（部品のまわりを拡大）
             x0, y0 = self.head_crop
             im.paste(Image.fromarray(head[y0:y0 + 160, x0:x0 + 214]).resize((SW, SH)), (x2, TOP + 24))
-            dr.text((x2, TOP), "頭部カメラ（天板で部品の大半が隠れる）", font=font(15), fill=(220, 220, 220))
+            dr.text((x2, TOP), "頭部カメラ（天板で部品の大半が隠れる）", font=font(15), fill=(95, 100, 105))
         if close is not None:
             y = TOP + 24 + SH + 16
             im.paste(Image.fromarray(close), (x2, y + 24))
-            dr.text((x2, y), "部品のまわりの拡大（天板は半透明）", font=font(15), fill=(220, 220, 220))
-            for k, (txt, col) in enumerate([("赤：触る点　青：掴む点", (230, 230, 230)), ("黄：形の候補ごとの本体の手前の縁", (230, 230, 230))]):
+            dr.text((x2, y), "部品のまわりの拡大（天板は半透明）", font=font(15), fill=(95, 100, 105))
+            for k, (txt, col) in enumerate([("赤：触る点　青：掴む点", (95, 100, 105)), ("黄：形の候補ごとの本体の手前の縁", (95, 100, 105))]):
                 dr.text((x2, y + 24 + SH + 6 + 20 * k), txt, font=font(14), fill=col)
         for k, line in enumerate(self.text.split("\n")):
-            dr.text((GAP, 10 + 28 * k), line, font=font(20 if k else 17), fill=(255, 230, 120) if k else (210, 210, 210))
+            dr.text((GAP, 10 + 28 * k), line, font=font(20 if k else 17), fill=(30, 95, 170) if k else (95, 100, 105))
         return np.array(im)
 
 

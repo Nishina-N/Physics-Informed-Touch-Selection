@@ -71,10 +71,10 @@ emit(card("同じ配置で、触る点の選び方だけを変える",
 A=[x for x in io.get_reader(VID+"trial64_voi.mp4")]; Bv=[x for x in io.get_reader(VID+"trial64_unc.mp4")]
 n=max(len(A),len(Bv)); cw=630; chh=int(cw*640/1072)            # 試行の動画（1072×640、黒背景）を縮めて左右に並べる
 for i in range(n):
-    im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
-    d.text((60,34),"3 / 6　比較（実時間）",font=f(22),fill=(170,170,170))
-    for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",(110,170,255),"掴めた"),
-                                             (Bv,"比較",U,(255,120,110),"掴み損ねた（部品が落ちる）")]):
+    im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
+    d.text((60,34),"3 / 6　比較（実時間）",font=f(22),fill=MUTED)
+    for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",ACC,"掴めた"),
+                                             (Bv,"比較",U,RED,"掴み損ねた（部品が落ちる）")]):
         x=6+k*(cw+8); fr=V[min(i,len(V)-1)]
         im.paste(Image.fromarray(fr).resize((cw,chh)),(x,170))
         d.text((x+10,84),lab,font=f(32,True),fill=col); d.text((x+10,128),sub,font=f(24,True),fill=col)
@@ -87,10 +87,10 @@ for tag,head in (("close","3 / 6　比較：手元のアップ（横から、実
   A=[x for x in io.get_reader(VID+f"trial64_voi_{tag}.mp4")]; Bv=[x for x in io.get_reader(VID+f"trial64_unc_{tag}.mp4")]
   n=max(len(A),len(Bv)); cw=560; chh=int(cw*560/640)
   for i in range(n):
-    im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
-    d.text((60,34),head,font=f(22),fill=(170,170,170))
-    for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",(110,170,255),"掴めた"),
-                                             (Bv,"比較",U,(255,120,110),"掴み損ねた（部品が落ちる）")]):
+    im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
+    d.text((60,34),head,font=f(22),fill=MUTED)
+    for k,(V,lab,sub,col,res) in enumerate([(A,"提案手法","掴める確率が最も上がる場所を触る",ACC,"掴めた"),
+                                             (Bv,"比較",U,RED,"掴み損ねた（部品が落ちる）")]):
         x=40+k*(cw+80); fr=V[min(i,len(V)-1)]
         im.paste(Image.fromarray(fr).resize((cw,chh)),(x,165))
         d.text((x,80),lab,font=f(30,True),fill=col); d.text((x,122),sub,font=f(22,True),fill=col)
@@ -126,15 +126,15 @@ emit(card("SmolVLM で部品を選び、触って確かめてから掴む",
   ("手の経路はどちらも同じ逆運動学。違うのは触るかどうかだけ",MUTED)],step="5 / 6　SmolVLM との組み合わせ"),7)
 VA=[x for x in io.get_reader(VID+"vlm_pick.mp4")]; VB=[x for x in io.get_reader(VID+"vlm_pick_t0.mp4")]
 hh=H-50; p=Image.fromarray(VA[0]).resize((int(hh*VA[0].shape[1]/VA[0].shape[0]),hh))
-im=Image.new("RGB",(W,H),(0,0,0)); im.paste(p,((W-p.width)//2,0))
-ImageDraw.Draw(im).text(((W-p.width)//2+16,H-40),"（SmolVLM-500M が GPU で答えた「2」。左の触らない側も同じ場面・同じ答えで動かした）",font=f(20),fill=(200,200,200))
+im=Image.new("RGB",(W,H),BG); im.paste(p,((W-p.width)//2,0))
+ImageDraw.Draw(im).text(((W-p.width)//2+16,H-40),"（SmolVLM-500M が GPU で答えた「2」。左の触らない側も同じ場面・同じ答えで動かした）",font=f(20),fill=MUTED)
 emit(im,5)
 skip=6*FPS; L=VB[skip:]; Rv=VA[skip:]; n=max(len(L),len(Rv)); cw=630; chh=int(cw*640/1072)
 for i in range(n):
-    im=Image.new("RGB",(W,H),(0,0,0)); d=ImageDraw.Draw(im)
-    d.text((60,34),"5 / 6　同じ場面・同じ部品（緑：フランジ 28mm・本体 13mm、カメラには見えない）　実時間",font=f(22),fill=(170,170,170))
-    for k,(V,lab,sub,col,res) in enumerate([(L,"SmolVLM で選んでそのまま掴む","触らずに、カメラの推定だけで掴む点を選ぶ",(255,120,110),"掴み損ねた"),
-                                             (Rv,"SmolVLM ＋ 提案手法","1回触って隠れたサイズを確かめてから掴む",(110,170,255),"掴めた")]):
+    im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
+    d.text((60,34),"5 / 6　同じ場面・同じ部品（緑：フランジ 28mm・本体 13mm、カメラには見えない）　実時間",font=f(22),fill=MUTED)
+    for k,(V,lab,sub,col,res) in enumerate([(L,"SmolVLM で選んでそのまま掴む","触らずに、カメラの推定だけで掴む点を選ぶ",RED,"掴み損ねた"),
+                                             (Rv,"SmolVLM ＋ 提案手法","1回触って隠れたサイズを確かめてから掴む",ACC,"掴めた")]):
         x=6+k*(cw+8); fr=V[min(i,len(V)-1)]
         im.paste(Image.fromarray(fr).resize((cw,chh)),(x,170))
         d.text((x+10,84),lab,font=f(30,True),fill=col); d.text((x+10,128),sub,font=f(22,True),fill=col)

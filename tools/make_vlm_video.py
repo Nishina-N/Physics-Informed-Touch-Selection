@@ -56,18 +56,18 @@ emit(im, 12)
 # 2 SmolVLM の入力と答え（vlm_pick の最初の画面をそのまま使う）
 A = [x for x in io.get_reader(a.right)]
 hh = H - 50; im = Image.fromarray(A[0]).resize((int(hh * A[0].shape[1] / A[0].shape[0]), hh))
-canvas = Image.new("RGB", (W, H), (0, 0, 0)); canvas.paste(im, ((W - im.width) // 2, 0))
-ImageDraw.Draw(canvas).text(((W - im.width) // 2 + 16, H - 40), a.answer_note, font=f(20), fill=(200, 200, 200))
+canvas = Image.new("RGB", (W, H), BG); canvas.paste(im, ((W - im.width) // 2, 0))
+ImageDraw.Draw(canvas).text(((W - im.width) // 2 + 16, H - 40), a.answer_note, font=f(20), fill=MUTED)
 emit(canvas, 7)
 # 3 左右に並べる（vlm_pick の最初の6秒の画面は除く）
 skip = 6 * FPS
 L = [x for x in io.get_reader(a.left)][skip:]; Rv = A[skip:]
 n = max(len(L), len(Rv)); cw = 630; chh = int(cw * 640 / 1072)
 for i in range(n):
-    im = Image.new("RGB", (W, H), (0, 0, 0)); d = ImageDraw.Draw(im)
-    d.text((60, 34), f"同じ場面・同じ部品（{a.part}、カメラには見えない）　実時間", font=f(22), fill=(170, 170, 170))
-    for k, (V, lab, sub, col, res) in enumerate([(L, "SmolVLM で選んでそのまま掴む", "触らずに、カメラの推定だけで掴む点を選ぶ", (255, 120, 110), "掴み損ねた"),
-                                                  (Rv, "SmolVLM ＋ 提案手法", "1回触って隠れたサイズを確かめてから掴む", (110, 170, 255), "掴めた")]):
+    im = Image.new("RGB", (W, H), BG); d = ImageDraw.Draw(im)
+    d.text((60, 34), f"同じ場面・同じ部品（{a.part}、カメラには見えない）　実時間", font=f(22), fill=MUTED)
+    for k, (V, lab, sub, col, res) in enumerate([(L, "SmolVLM で選んでそのまま掴む", "触らずに、カメラの推定だけで掴む点を選ぶ", RED, "掴み損ねた"),
+                                                  (Rv, "SmolVLM ＋ 提案手法", "1回触って隠れたサイズを確かめてから掴む", ACC, "掴めた")]):
         x = 6 + k * (cw + 8); fr = V[min(i, len(V) - 1)]
         im.paste(Image.fromarray(fr).resize((cw, chh)), (x, 170))
         d.text((x + 10, 84), lab, font=f(30, True), fill=col); d.text((x + 10, 128), sub, font=f(22, True), fill=col)

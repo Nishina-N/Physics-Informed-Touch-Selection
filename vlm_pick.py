@@ -182,16 +182,16 @@ def intro_frame(vlm_img, instruct, answer_text, slot, colors, sizes):
     """動画の最初：SmolVLM に渡した画像と、指示文・答え（1072×640）。"""
     from PIL import Image, ImageDraw, ImageFont
     font = lambda n: ImageFont.truetype(V.FONT, n, index=0)
-    im = Image.new("RGB", (V.VW, V.VH), (0, 0, 0)); dr = ImageDraw.Draw(im)
+    im = Image.new("RGB", (V.VW, V.VH), (250, 250, 248)); dr = ImageDraw.Draw(im)
     p = vlm_img.copy(); p.thumbnail((V.VW - 32, V.VH - 250))
     im.paste(p, ((V.VW - p.width) // 2, 140))
     hid = "　／　".join(f"{k + 1}：フランジ {f * 1000:.0f}mm・本体 {L * 1000:.0f}mm" for k, (f, L) in enumerate(sizes))
-    dr.text((16, V.VH - 90), f"隠れたサイズ（カメラには見えない）　{hid}", font=font(19), fill=(210, 210, 210))
-    dr.text((16, V.VH - 56), "→ 選んだ部品のサイズは、提案手法で触って確かめてから掴む", font=font(19), fill=(210, 210, 210))
-    dr.text((16, 12), "SmolVLM が指示文と頭部カメラの画像から、取る部品を選ぶ", font=font(20), fill=(210, 210, 210))
-    dr.text((16, 50), f'指示文："{instruct}"', font=font(24), fill=(255, 255, 255))
+    dr.text((16, V.VH - 90), f"隠れたサイズ（カメラには見えない）　{hid}", font=font(19), fill=(95, 100, 105))
+    dr.text((16, V.VH - 56), "→ 選んだ部品のサイズは、提案手法で触って確かめてから掴む", font=font(19), fill=(95, 100, 105))
+    dr.text((16, 12), "SmolVLM が指示文と頭部カメラの画像から、取る部品を選ぶ", font=font(20), fill=(95, 100, 105))
+    dr.text((16, 50), f'指示文："{instruct}"', font=font(24), fill=(25, 28, 30))
     dr.text((16, 92), f'SmolVLM の答え："{answer_text}"  →  部品 {slot + 1}（{COLOR_JA.get(colors[slot], colors[slot])}）',
-            font=font(24), fill=(255, 230, 120))
+            font=font(24), fill=(30, 95, 170))
     return np.array(im)
 
 
