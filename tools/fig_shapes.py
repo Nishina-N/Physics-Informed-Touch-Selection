@@ -2,7 +2,8 @@
 
 使い方（リポジトリの直下で）:
   uv run python tools/fig_shapes.py docs/figures/fig_shapes.png
-3つとも見えている長さ 10mm（フランジの手前だけ見える）。フランジ＋本体の長さは 32mm（a）、36mm（b）、40mm（c）。
+3つとも見えている長さ 10mm（フランジの手前だけ見える）。
+上段は、元の図（少し横から見た視点）を docs/figures/fig1_top_view.png に切り出して使う。無ければこのコードの視点で描く。フランジ＋本体の長さは 32mm（a）、36mm（b）、40mm（c）。
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -12,6 +13,7 @@ import mujoco
 import build_scene as bs
 from PIL import Image, ImageDraw, ImageFont
 
+TOP_VIEW = os.path.join(os.path.dirname(__file__), "..", "docs", "figures", "fig1_top_view.png")
 PARTS = [(0.012, 0.020), (0.020, 0.016), (0.028, 0.012)]   # (フランジの長さ, 本体の長さ)
 VISIBLE = 0.010
 W_OV, H_OV = 800, 600
@@ -95,6 +97,8 @@ def main(out):
         dim(a["f0"], a["f1"], f"ℓ_f={fl * 1000:.0f}", 22)
         dim(a["f1"], a["b1"], f"ℓ_b={lb * 1000:.0f}", 22)
         im = im.crop((0, 60, 800, 574)).resize((480, 309))
+        if os.path.exists(TOP_VIEW):                             # 元の図の、少し横から見た上段を使う（作ったコードが残っていない）
+            im = Image.open(TOP_VIEW).crop((560 * k, 0, 560 * k + 560, 360)).resize((480, 309), Image.LANCZOS)
         fig.paste(im, (60 + 560 * k, 60))
         dr.text((30 + 560 * k, 18), f"({'abc'[k]}) 本体の長さ {lb * 1000:.0f}mm（フランジ {fl * 1000:.0f}mm）",
                 font=font(24, True), fill=(0, 0, 0))
