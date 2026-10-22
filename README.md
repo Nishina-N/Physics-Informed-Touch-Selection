@@ -28,10 +28,10 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 
 | ファイル | 内容 |
 |---|---|
-| `docs/report.pdf` | 提出したレポート（14ページ） |
+| `docs/report.pdf` | 提出したレポート（16ページ） |
 | `docs/paper_ja.md` | レポートの本文（日本語の Markdown）。図は `docs/figures/` を参照 |
 | `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
-| `docs/figures/` | レポートの図1〜5。`fig1_shapes`＝図1（形の族）、`fig0_pipeline`＝図2（学習と推論の流れのブロック図）、`fig2_touch_rule`＝図3（触る点の選び方の比較）、`fig3_layout64`＝図4（配置64の3コマ）、`fig4_calibration`＝図5（予測の較正）。ファイル名の番号はブロック図を足す前のもの |
+| `docs/figures/` | レポートの図1〜5。`fig1_shapes`＝図1（形の族）、`fig0_pipeline`＝図2（学習と推論の流れのブロック図）、`fig2_touch_rule`＝図3（触る点の選び方の比較）、`fig3_layout64`＝図4（配置64の3コマ）、`fig4_calibration`＝図5（予測の較正）、`fig6_vlm_compare`＝図6（SmolVLM との組み合わせ）。ファイル名の番号はブロック図を足す前のもの |
 | `docs/videos/touch_selection.mp4` | 提出用の動画（2分56秒。5/6 に SmolVLM との組み合わせ） |
 | `docs/videos/trial64_voi.mp4`・`trial64_unc.mp4` | 配置64の試行（提案手法／形の不確かさ最大の場所を触って精度向上） |
 | `docs/videos/trial64_voi_close.mp4`・`trial64_unc_close.mp4` | 同じ試行の手元のアップ（横から。部品が机の手前に落ちるところまで入る） |
