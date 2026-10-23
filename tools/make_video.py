@@ -1,10 +1,12 @@
 """紹介動画（docs/videos/touch_selection.mp4、3分以内）を作る。説明のカードと、配置64の2つの試行の動画を並べる。
 
 使い方（リポジトリの直下で）:
-  uv run python tools/make_video.py
+  uv run python tools/make_video.py [--op 講座のオープニング.mp4] [--ed 講座のエンディング.mp4]
+--op・--ed を渡すと、講座から配られたオープニングとエンディング（各約3秒）を最初と最後につなぐ（どちらもリポジトリには入れていない）。
 材料：docs/figures/fig0_pipeline.png・fig1_shapes.png・fig2_touch_rule.png、docs/videos/trial64_voi.mp4・trial64_unc.mp4（全体）・trial64_voi_close.mp4・trial64_unc_close.mp4（手元）・trial64_*_macro.mp4（指先）
 （試行の動画は view_trial.py 64 --rule voi --video ...、手元は --close、指先は --macro を足して作り直せる）。フォントは Noto Sans CJK。
 """
+import argparse
 import numpy as np, imageio.v2 as io
 from PIL import Image, ImageDraw, ImageFont
 FIG, VID = "docs/figures/", "docs/videos/"
@@ -14,6 +16,11 @@ R="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"; B="/usr/share/fonts/
 f=lambda s,b=False: ImageFont.truetype(B if b else R,s,index=0)
 BG=(250,250,248); FG=(25,28,30); MUTED=(95,100,105); ACC=(30,95,170); RED=(175,45,45)
 out=io.get_writer(VID+"touch_selection.mp4",fps=FPS,codec="libx264",quality=8,macro_block_size=16)
+ap=argparse.ArgumentParser(); ap.add_argument("--op"); ap.add_argument("--ed"); A=ap.parse_args()
+def clip(fn):
+    """講座のオープニング・エンディングを、この動画の大きさに合わせてそのままつなぐ。"""
+    for fr in io.get_reader(fn):
+        out.append_data(np.array(Image.fromarray(fr).resize((W,H),Image.LANCZOS)))
 def emit(img,sec):
     a=np.array(img.convert("RGB"))
     for _ in range(int(sec*FPS)): out.append_data(a)
@@ -31,6 +38,7 @@ def card(title,lines=(),img=None,img_box=None,foot=None,step=None):
         im.paste(p,(x0+(x1-x0-p.width)//2,y0+(y1-y0-p.height)//2))
     if foot: d.text((60,H-50),foot,font=f(20),fill=MUTED)
     return im
+if A.op: clip(A.op)
 # 1 title
 im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
 d.text((80,210),"棚の奥で一部が隠れた部品を掴むための",font=f(48,True),fill=FG)
@@ -38,14 +46,14 @@ d.text((80,280),"触る点の選択",font=f(48,True),fill=FG)
 d.text((80,370),"物理から学習した成功確率を、形の候補で平均する",font=f(30),fill=MUTED)
 d.text((80,450),"MuJoCo ／ Unitree G1 ＋ Dex3",font=f(26),fill=MUTED)
 d.text((80,600),"Physical AI 応用1講座 最終課題",font=f(24),fill=MUTED)
-emit(im,5)
+emit(im,4)
 # 2 problem
 emit(card("問題：奥が見えないと、どこを挟めばよいか分からない",
   ["天板に隠れて、カメラにはフランジの手前しか見えない。下の3つは見た目が同じ。"],
   img=FIG+"fig1_shapes.png",img_box=(60,200,1220,670),step="1 / 6　問題",
   foot="手前に低いフランジ（4mm）、奥に掴める本体。フランジと本体の長さは未知。フランジだけ挟んでも持ち上がらない。"),12)
 # 3a 学習と推論の流れ（ブロック図、tools/fig_pipeline.py）
-emit(Image.open(FIG+"fig0_pipeline.png").convert("RGB").resize((W,H),Image.LANCZOS),15)
+emit(Image.open(FIG+"fig0_pipeline.png").convert("RGB").resize((W,H),Image.LANCZOS),13)
 # 3 method
 emit(card("方法：触った後に「掴める確率」が最も上がる所を触る",
  ["① カメラ（領域分割＋深度）で、形の候補を200個つくる",
@@ -159,4 +167,5 @@ emit(card("わかったこと",
   ("・限界：シミュレーションのみ（実機は未検証）、形の型は既知で長さ2つが未知",MUTED),
   "","コード・学習済みモデル・全結果：",
   ("github.com/Nishina-N/Physics-Informed-Touch-Selection",ACC)],step="6 / 6　まとめ"),12)
+if A.ed: clip(A.ed)
 out.close()
