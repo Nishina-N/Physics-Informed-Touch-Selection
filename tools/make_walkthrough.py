@@ -492,9 +492,9 @@ def main():
     nav = "".join(f"<a href='#{k}'>{t}</a>" for k, t in [("flow", "全体の流れ"), ("learn", "学習"), ("infer", "推論"),
                                                         ("vlm", "SmolVLM"), ("run", "手元で動かす"), ("others", "ほかのファイル")])
     page = f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>触る点の選択 コードの読み方</title><style>{CSS}</style></head><body>
+<title>どこを触るか コードの読み方</title><style>{CSS}</style></head><body>
 <nav class="top"><div class="in"><b>コードの読み方</b>{nav}</div></nav>
-<div class="wrap"><header><h1>棚の奥で一部が隠れた部品を掴むための、触る点の選択：コードの読み方</h1>
+<div class="wrap"><header><h1>棚の奥などで一部しか見えない部品を掴むためにどこを触るか：コードの読み方</h1>
 <p class="lead">学習と推論で、どのスクリプトがどの順に何をしているかを、実行する順に追えるようにしたものです。左に要の関数の抜粋（{len(CH)}か所、計{nlines}行）、右に解説を置いています。
 コードは <a href="{REPO}">GitHub のリポジトリ</a>のコミット <code>{commit[:7]}</code> のもので、見出しの右のリンクから元のファイルの該当行へ移れます。</p></header>
 {''.join(body)}

@@ -41,9 +41,9 @@ def card(title,lines=(),img=None,img_box=None,foot=None,step=None):
 if ARGS.op: clip(ARGS.op)
 # 1 title
 im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
-d.text((80,210),"棚の奥で一部が隠れた部品を掴むための",font=f(48,True),fill=FG)
-d.text((80,280),"触る点の選択",font=f(48,True),fill=FG)
-d.text((80,370),"物理から学習した成功確率を、形の候補で平均する",font=f(30),fill=MUTED)
+d.text((80,210),"棚の奥などで一部しか見えない部品を",font=f(48,True),fill=FG)
+d.text((80,280),"掴むためにどこを触るか",font=f(48,True),fill=FG)
+d.text((80,370),"触った後に掴める確率が最も上がる所を触る",font=f(30),fill=MUTED)
 d.text((80,450),"MuJoCo ／ Unitree G1 ＋ Dex3",font=f(26),fill=MUTED)
 d.text((80,600),"Physical AI 応用1講座 最終課題",font=f(24),fill=MUTED)
 emit(im,4)
