@@ -30,7 +30,7 @@ MuJoCo 上の Unitree G1＋Dex3（3指ハンド）が、上の段の天板で奥
 |---|---|
 | `docs/report.pdf` | 提出したレポート（16ページ） |
 | `docs/paper_ja.md` | レポートの本文（日本語の Markdown）。図は `docs/figures/` を参照 |
-| `docs/code_guide.html` | コードの解説（左にコード、右に関数ごとの動作）。ダウンロードしてブラウザで開く |
+| `docs/code_guide.html` | コードの読み方。学習と推論で実行する順に、左に要の関数、右に解説（https://nishina-n.github.io/Physics-Informed-Touch-Selection/code_guide.html 、`tools/make_walkthrough.py` で作る） |
 | `docs/figures/` | レポートの図1〜5。`fig1_shapes`＝図1（形の族）、`fig0_pipeline`＝図2（学習と推論の流れのブロック図）、`fig2_touch_rule`＝図3（触る点の選び方の比較）、`fig3_layout64`＝図4（配置64の3コマ）、`fig4_calibration`＝図5（予測の較正）、`fig6_vlm_compare`＝図6（SmolVLM との組み合わせ）。ファイル名の番号はブロック図を足す前のもの |
 | `docs/videos/touch_selection.mp4` | 提出用の動画（2分56秒。5/6 に SmolVLM との組み合わせ） |
 | `docs/videos/trial64_voi.mp4`・`trial64_unc.mp4` | 配置64の試行（提案手法／形の不確かさ最大の場所を触って精度向上） |
@@ -49,6 +49,7 @@ uv run python view_trial.py 64 --rule voi --close --video docs/videos/trial64_vo
 uv run python view_trial.py 64 --rule unc --close --video docs/videos/trial64_unc_close.mp4
 uv run python view_trial.py 64 --rule voi --macro --video docs/videos/trial64_voi_macro.mp4
 uv run python view_trial.py 64 --rule unc --macro --video docs/videos/trial64_unc_macro.mp4
+uv run python tools/make_walkthrough.py                               # コードの読み方 docs/code_guide.html（コードを直したら作り直す）
 uv run python tools/make_video.py                                    # 提出用の動画（図1〜3、上の試行の動画、vlm_pick.mp4・vlm_pick_t0.mp4 から）
 ```
 
@@ -86,7 +87,7 @@ git -C third_party/mujoco_menagerie checkout c96a32d28fb5da84da38c1da4d749e7a132
 | `run_vlm_compare.py` | 部品2つ並びの場面で、触らずに掴む場合と1回触ってから掴む場合を比べる |
 | `run_vlm_point.py` | 掴む位置を SmolVLM に選ばせる場合と、予測器・提案手法で選ぶ場合を比べる |
 | `vlm_pick.py` | 指示文で取る部品を SmolVLM に選ばせ、選んだ部品を触って掴むデモ（本実験の数字には関わらない） |
-| `tools/` | 図1・図3・紹介動画を作るスクリプト |
+| `tools/` | 図・紹介動画・コードの読み方を作るスクリプト |
 | `results/` | `gdata_*`（学習データ 8,000 件）、`tsel_*`（240 配置×3 規則）、`branch_*`（120 配置）。`v1_retract/` は毎回腕を戻す前の動きでの結果 |
 
 ## 動きを見る
