@@ -16,7 +16,7 @@ R="/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"; B="/usr/share/fonts/
 f=lambda s,b=False: ImageFont.truetype(B if b else R,s,index=0)
 BG=(250,250,248); FG=(25,28,30); MUTED=(95,100,105); ACC=(30,95,170); RED=(175,45,45)
 out=io.get_writer(VID+"touch_selection.mp4",fps=FPS,codec="libx264",quality=8,macro_block_size=16)
-ap=argparse.ArgumentParser(); ap.add_argument("--op"); ap.add_argument("--ed"); A=ap.parse_args()
+ap=argparse.ArgumentParser(); ap.add_argument("--op"); ap.add_argument("--ed"); ARGS=ap.parse_args()
 def clip(fn):
     """講座のオープニング・エンディングを、この動画の大きさに合わせてそのままつなぐ。"""
     for fr in io.get_reader(fn):
@@ -38,7 +38,7 @@ def card(title,lines=(),img=None,img_box=None,foot=None,step=None):
         im.paste(p,(x0+(x1-x0-p.width)//2,y0+(y1-y0-p.height)//2))
     if foot: d.text((60,H-50),foot,font=f(20),fill=MUTED)
     return im
-if A.op: clip(A.op)
+if ARGS.op: clip(ARGS.op)
 # 1 title
 im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
 d.text((80,210),"棚の奥で一部が隠れた部品を掴むための",font=f(48,True),fill=FG)
@@ -167,5 +167,5 @@ emit(card("わかったこと",
   ("・限界：シミュレーションのみ（実機は未検証）、形の型は既知で長さ2つが未知",MUTED),
   "","コード・学習済みモデル・全結果：",
   ("github.com/Nishina-N/Physics-Informed-Touch-Selection",ACC)],step="6 / 6　まとめ"),12)
-if A.ed: clip(A.ed)
+if ARGS.ed: clip(ARGS.ed)
 out.close()
