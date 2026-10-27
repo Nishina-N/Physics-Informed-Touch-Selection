@@ -19,6 +19,8 @@ VISIBLE = 0.010
 W_OV, H_OV = 800, 600
 FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 FONT_B = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+EN = os.environ.get("FIG_LANG") == "en"               # 論文用の英語の図（FIG_LANG=en）
+T = lambda ja, en: en if EN else ja
 font = lambda s, b=False: ImageFont.truetype(FONT_B if b else FONT, s, index=0)
 
 
@@ -100,7 +102,8 @@ def main(out):
         if os.path.exists(TOP_VIEW):                             # 元の図の、少し横から見た上段を使う（作ったコードが残っていない）
             im = Image.open(TOP_VIEW).crop((560 * k, 0, 560 * k + 560, 360)).resize((480, 309), Image.LANCZOS)
         fig.paste(im, (60 + 560 * k, 60))
-        dr.text((30 + 560 * k, 18), f"({'abc'[k]}) 本体の長さ {lb * 1000:.0f}mm（フランジ {fl * 1000:.0f}mm）",
+        dr.text((30 + 560 * k, 18), T(f"({'abc'[k]}) 本体の長さ {lb * 1000:.0f}mm（フランジ {fl * 1000:.0f}mm）",
+                                      f"({'abc'[k]}) body {lb * 1000:.0f} mm (flange {fl * 1000:.0f} mm)"),
                 font=font(24, True), fill=(0, 0, 0))
         # 頭部カメラ：部品のまわりを切り出して拡大
         h = Image.fromarray(head)
@@ -108,8 +111,10 @@ def main(out):
         x0 = int(np.clip(pu - 64, 0, 640 - 128)); y0 = int(np.clip(pv - 28, 0, 480 - 80))   # 上の図と同じくらいの大きさで見えるよう、狭く切り出す
         crop = h.crop((x0, y0, x0 + 128, y0 + 80)).resize((480, 300), Image.LANCZOS)
         fig.paste(crop, (60 + 560 * k, 430))
-    dr.text((30, 386), "↓ 頭部カメラから見ると（部品のまわりを拡大）：3つとも同じに見える", font=font(24, True), fill=(0, 0, 0))
-    dr.text((24, 750), "点線より奥（網掛け）は天板に隠れてカメラから見えない（見えている長さ 10mm）。寸法の単位は mm。",
+    dr.text((30, 386), T("↓ 頭部カメラから見ると（部品のまわりを拡大）：3つとも同じに見える",
+                         "↓ Seen from the head camera (cropped around the part): all three look the same"), font=font(24, True), fill=(0, 0, 0))
+    dr.text((24, 750), T("点線より奥（網掛け）は天板に隠れてカメラから見えない（見えている長さ 10mm）。寸法の単位は mm。",
+                         "Beyond the dotted line (shaded), the shelf board hides the part from the camera (visible length 10 mm). Dimensions in mm."),
             font=font(21), fill=(80, 80, 80))
     fig.save(out); print("保存:", out)
 

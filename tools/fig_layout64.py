@@ -3,6 +3,7 @@
 
 使い方（リポジトリの直下で。2つの試行を動かすので数分かかる）:
   uv run python tools/fig_layout64.py docs/figures/fig3_layout64.png
+  FIG_LANG=en uv run python tools/fig_layout64.py paper/figures/layout64.png   # 論文用（英語）
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -16,6 +17,8 @@ FONT = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
 FONT_B = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 font = lambda s, b=False: ImageFont.truetype(FONT_B if b else FONT, s, index=0)
 BLUE, RED = (20, 80, 170), (180, 30, 30)
+EN = os.environ.get("FIG_LANG") == "en"               # 論文用の英語の図
+T = lambda ja, en: en if EN else ja
 
 
 def aim(self, cam):                                   # 部品のまわりに寄った視点（動画より近い）
@@ -58,22 +61,27 @@ def main(out):
     cw, ch = 640, 363                                   # 960×544 を 2/3 に
     W, H = 60 + 3 * cw + 20, 50 + 2 * (ch + 10) + 40
     fig = Image.new("RGB", (W, H), "white"); dr = ImageDraw.Draw(fig)
-    for k, lab in enumerate(["① 触る（中指で上から）", "② 挟む", "③ 引き出して持ち上げる"]):
+    for k, lab in enumerate([T("① 触る（中指で上から）", "(1) Touch (middle finger, from above)"), T("② 挟む", "(2) Pinch"),
+                             T("③ 引き出して持ち上げる", "(3) Pull out and lift")]):
         dr.text((70 + k * cw, 14), lab, font=font(28, True), fill=(0, 0, 0))
-    for r, ((frames, ok), name, col) in enumerate(zip(rows, ["提案手法", "形の不確かさ最大の場所を触って精度向上"], [BLUE, RED])):
+    for r, ((frames, ok), name, col) in enumerate(zip(rows, [T("提案手法", "Ours"), T("形の不確かさ最大の場所を触って精度向上", "Max. shape uncertainty")], [BLUE, RED])):
         y = 50 + r * (ch + 10)
         for k, f in enumerate(frames):
             fig.paste(Image.fromarray(f).resize((cw, ch)), (60 + k * cw, y))
-        msg = "掴めた" if ok else "掴み損ねた（部品が落ちる）"
+        msg = T("掴めた", "Success") if ok else T("掴み損ねた（部品が落ちる）", "Failure (part drops)")
         tw = dr.textlength(msg, font=font(28, True))
         x1 = 60 + 3 * cw - 10
         dr.rectangle([x1 - tw - 16, y + 10, x1, y + 54], fill="white")
         dr.text((x1 - tw - 8, y + 14), msg, font=font(28, True), fill=col)
-        fs = min(28, int((ch - 16) / len(name)))          # 長い呼び名は字を小さくして縦の帯に収める
+        fs = 28                                          # 長い呼び名は字を小さくして縦の帯に収める
+        while ImageDraw.Draw(fig).textlength(name, font=font(fs, True)) > ch - 16:
+            fs -= 1
+        tw_ = ImageDraw.Draw(fig).textlength(name, font=font(fs, True))
         lab = Image.new("RGB", (ch, 50), "white"); ImageDraw.Draw(lab).text(
-            ((ch - fs * len(name)) / 2, 6 + (28 - fs) // 2), name, font=font(fs, True), fill=(0, 0, 0))
+            ((ch - tw_) / 2, 6 + (28 - fs) // 2), name, font=font(fs, True), fill=(0, 0, 0))
         fig.paste(lab.rotate(90, expand=True), (5, y))
-    dr.text((60, H - 34), "赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁（200個）　　配置64、見えている長さ10mm",
+    dr.text((60, H - 34), T("赤：触る点　青：掴む点　黄：形の候補ごとの本体の手前の縁（200個）　　配置64、見えている長さ10mm",
+                            "Red: touch point   Blue: grasp point   Yellow: body front edge of each shape candidate (200)   Layout 64, visible length 10 mm"),
             font=font(22), fill=(80, 80, 80))
     fig.save(out); print("保存:", out)
 
