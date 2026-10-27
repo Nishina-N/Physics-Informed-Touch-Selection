@@ -3,9 +3,12 @@
   unc : 部品がそこにあるかどうかの確率 p の分散 p(1−p) が最大の点（Act-VH と同じ「形の不確かさが最大」の考え方）
   rand: 候補から一様に選ぶ
   geom: voi と同じ先読みだが、成功確率に学習した予測器を使わず、幾何の規則（本体の縁から余裕の内側なら成功）を使う。
-        触る点も掴む点もこの規則で選ぶ（学習した成功確率がどれだけ役に立つかを見る比較。DA-GRD に近い条件）
+        触る点も掴む点もこの規則で選ぶ（簡単な見積もりと細かい見積もりの比較）
+  fixshape: voi と同じ先読みと予測器だが、形（フランジと本体の長さ）は範囲の中央の値に決め打ちし、位置と向きだけを
+        推定・更新する（DA-GRD のように形を既知とする条件。隠れた形を推定することの価値を見る比較）
 使い方: python3 run_touchsel.py k n N predictor.pkl → results/tsel_k.jsonl（voi・unc・rand）
         TSEL_RULES=geom python3 run_touchsel.py k n N predictor.pkl → results/tselgeom_k.jsonl
+        TSEL_RULES=fixshape python3 run_touchsel.py k n N predictor.pkl → results/tselfixshape_k.jsonl
 """
 import sys, gc, json, os, time
 import numpy as np
@@ -15,6 +18,7 @@ import partfilter as F
 import build_scene as bs
 import run_branch as RB
 
+FIX_SHAPE = (np.mean(RB.FL_R), np.mean(RB.L_R))   # fixshape の決め打ちの形（範囲の中央：フランジ 20mm、本体 16mm）
 RULES = tuple(os.environ.get("TSEL_RULES", "voi,unc,rand").split(","))
 N_TOUCH = 2
 
@@ -26,7 +30,7 @@ def occupancy(parts, x, y):
 
 
 def choose(rule, est, gc_, tc, rng):
-    if rule in ("voi", "geom"):                     # geom は予測器を読み込まないので、幾何の規則で同じ先読みをする
+    if rule in ("voi", "geom", "fixshape"):                     # geom は予測器を読み込まないので、幾何の規則で同じ先読みをする
         return F.choose_touch_m(est, gc_, tc)[0]
     if rule == "unc":
         v = [occupancy(est, x, y) for x, y in tc]
@@ -47,8 +51,12 @@ def trial(i, rule, pred):
     cam, dep, cm, tm, occl = P.observe(m, d, s.cube, rng)
     _, ztab = P.estimate_size(cam, dep, cm, tm)
     yaw0 = P.yaw_from_depth(cam, dep, cm, ztab)
-    est, _ = P.init_particles_part(cam, cm, occl, RB.W, ztab, rng, (S.X_FRONT, S.Y0), RB.FL_R, RB.L_R, yaw0=yaw0)
-    est, seen = P.refine_part_depth(est, cam, dep, cm, ztab, s.front_x, bs.TABLE_TOP_Z + bs.SHELF_H, RB.FL_R, rng)
+    flr, lr = ((FIX_SHAPE[0],) * 2, (FIX_SHAPE[1],) * 2) if rule == "fixshape" else (RB.FL_R, RB.L_R)   # fixshape は決め打ちの形で照合する
+    est, _ = P.init_particles_part(cam, cm, occl, RB.W, ztab, rng, (S.X_FRONT, S.Y0), flr, lr, yaw0=yaw0)
+    if rule == "fixshape":                            # 形は決め打ち（深度で本体の縁を探すのも形の推定なので行わない）
+        est[:, 3], est[:, 4] = FIX_SHAPE; seen = None
+    else:
+        est, seen = P.refine_part_depth(est, cam, dep, cm, ztab, s.front_x, bs.TABLE_TOP_Z + bs.SHELF_H, RB.FL_R, rng)
     R = d.body(s.cube).xmat.reshape(3, 3)
     front = d.body(s.cube).xpos + R @ np.array([-(lay["fl"] + lay["L"] / 2), 0, 0])
     steps = []
@@ -57,6 +65,8 @@ def trial(i, rule, pred):
         tx, ty = choose(rule, est, gc_, tc, rr)
         r = s.touch([tx, ty])
         est = F.update(est, tx, ty, r["obs"], rng)
+        if rule == "fixshape":                        # 更新で加わる長さのゆらぎも戻す
+            est[:, 3], est[:, 4] = FIX_SHAPE
         (gx, gy), p = F.best_grasp_m(est, F.axis_points(est))
         res = RB.branch_grasp(s, [gx, gy, ztab + RB.W / 2])
         steps.append(dict(k=k, touch_rel_mm=float((tx - front[0]) * 1000), obs=r["obs"], p=p, **res,
