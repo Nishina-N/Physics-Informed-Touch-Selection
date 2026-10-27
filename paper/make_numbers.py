@@ -62,7 +62,7 @@ def main():
     br = lambda d: float(np.mean([(d[i]["steps"][0]["p"] - d[i]["steps"][0]["success"]) ** 2 for i in ids]))
     brier_o, brier_g = br(ours), br(geom)
     summ = (f"{g.mean()*100:.1f}\\%, only {sign(m)} points below ours (95\\% CI [{sign(lo)}, {sign(hi)}], ${fmt_p(p)}$)")
-    para = (f"With the geometric tolerance in place of $f_\\phi$ (\\Geom), success after one touch was {g.mean()*100:.1f}\\%, against "
+    para = (f"With the three-threshold model in place of $f_\\phi$ (\\Geom), success after one touch was {g.mean()*100:.1f}\\%, against "
             f"{a.mean()*100:.1f}\\% for \\Ours{{}} (paired difference {sign(m)} points, 95\\% CI [{sign(lo)}, {sign(hi)}]; discordant layouts "
             f"{w} vs.\\ {l}; McNemar ${fmt_p(p)}$). By visible length, \\Ours{{}} minus \\Geom{{}} was "
             + ", ".join(f"{sign(x[3])} [{sign(x[4])}, {sign(x[5])}] at {x[0]:.0f}\\,mm" for x in per)

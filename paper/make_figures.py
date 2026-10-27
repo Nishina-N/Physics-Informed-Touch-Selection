@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 OUT = os.path.join(ROOT, "paper", "figures")
 VIS = (10.0, 15.0, 20.0, 25.0)
-RULES = [("voi", "Ours", "#2a78d6", ""), ("geom", "Ours-Geom", "#eda100", ""), ("unc", "MaxUnc", "#eb6834", "//"), ("rand", "Random", "#1baf7a", "..")]
+RULES = [("voi", "Ours", "#2a78d6", ""), ("geom", "Ours-Threshold", "#eda100", ""), ("unc", "MaxUnc", "#eb6834", "//"), ("rand", "Random", "#1baf7a", "..")]
 INK, MUTED, GRID = "#1d2120", "#5f6763", "#e2e3dd"
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "axes.edgecolor": MUTED, "axes.labelcolor": INK,

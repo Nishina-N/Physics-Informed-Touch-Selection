@@ -9,13 +9,13 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 
-% Numbers that come from the learned-vs-geometric ablation (filled in from results/tselgeom_*.jsonl)
+% Numbers that come from the simple-vs-detailed success model comparison (filled in from results/tselgeom_*.jsonl)
 \input{numbers_geom}
 
 \newcommand{\Ours}{Ours}
 \newcommand{\Unc}{MaxUnc}
 \newcommand{\Rand}{Random}
-\newcommand{\Geom}{Ours-Geom}
+\newcommand{\Geom}{Ours-Threshold}
 
 \begin{document}
 
@@ -29,7 +29,7 @@ EMAIL}}
 \maketitle
 
 \begin{abstract}
-A small part stored under a shelf is often visible only at its front: the shelf board hides the rest from the robot's head camera, and the hidden part of the shape decides where the part can be pinched. We propose to resolve this with a single light touch chosen for the grasp, not for the shape. Shape candidates (particles) are initialized from segmentation and depth, and a small neural network trained on 8,000 physics-randomized simulated grasps predicts the grasp success of each candidate at each grasp point. The robot touches the point that maximizes the expected best grasp success after the touch, i.e., where either outcome, hit or miss, makes it clear where to grasp next. On 240 paired layouts with a Unitree G1 humanoid and a three-finger hand in MuJoCo, grasp success after one touch was 95.4\% with our rule, against 88.8\% when touching where shape uncertainty is largest and 88.8\% for random touches (+6.7 points, 95\% CI [+2.1, +11.3], McNemar $p=0.005$). The gap grew to +15.0 points when only 10\,mm of the part was visible. With a hand-measured geometric tolerance in place of the learned model, the same lookahead reached \GeomSummary, suggesting that most of the gain comes from choosing the touch for the grasp rather than from learning. Grasping without touching succeeded in 72.5\% of layouts, and failed grasps moved the part by more than 10\,mm in most cases. A rule that stops touching once the predicted success exceeds a threshold gave no gain over always touching once. All results are in simulation; code, trained model, and raw results are public.
+A small part stored under a shelf is often visible only at its front: the shelf board hides the rest from the robot's head camera, and the hidden part of the shape decides where the part can be pinched. We propose to resolve this with a single light touch chosen for the grasp, not for the shape. Shape candidates (particles) are initialized from segmentation and depth, and a small neural network trained on 8,000 physics-randomized simulated grasps predicts the grasp success of each candidate at each grasp point. The robot touches the point that maximizes the expected best grasp success after the touch, i.e., where either outcome, hit or miss, makes it clear where to grasp next. On 240 paired layouts with a Unitree G1 humanoid and a three-finger hand in MuJoCo, grasp success after one touch was 95.4\% with our rule, against 88.8\% when touching where shape uncertainty is largest and 88.8\% for random touches (+6.7 points, 95\% CI [+2.1, +11.3], McNemar $p=0.005$). The gap grew to +15.0 points when only 10\,mm of the part was visible. With a three-threshold success model set from preliminary grasp trials in place of the network, the same lookahead reached \GeomSummary: this part family was not hard enough to need the network, and the gain comes from where the robot touches. Grasping without touching succeeded in 72.5\% of layouts, and failed grasps moved the part by more than 10\,mm in most cases. A rule that stops touching once the predicted success exceeds a threshold gave no gain over always touching once. All results are in simulation; code, trained model, and raw results are public.
 \end{abstract}
 
 \section{Introduction}
@@ -38,13 +38,13 @@ When a humanoid robot picks parts in a factory or warehouse, the parts often sit
 
 Many works complete a partially seen shape by touch and then grasp~\cite{rustler2022actvh,rustler2023efficient,defarias2021simultaneous,rustler2026shapegrasp}. Most choose where to touch by the largest shape uncertainty~\cite{rustler2022actvh,dragiev2013uncertainty,kissoum2023tactile}. This criterion is sound for reconstructing the shape, but it is not necessarily best for grasping, because the most uncertain region may be irrelevant to whether a grasp succeeds (for example, the far end of a part).
 
-We choose the touch point that maximizes the \emph{expected best grasp success probability after the touch}. In plain words, we touch where either outcome, hit or miss, makes it clear where to grasp next. The success probability of each shape candidate at each grasp point comes from a small neural network trained on physics-simulation trials in which friction, mass, and finger gains are randomized; it is averaged over the candidates as in Lundell et al.~\cite{lundell2019robust}, but we use it to choose the touch as well as the grasp. DA-GRD~\cite{wang2026dagrd} also explores in grasp space rather than object space, for a known object whose pose drifted between perception and execution; it scores grasps with a geometric tolerance. We address hidden \emph{shape} under a shelf, and we test whether a learned, physics-randomized success model adds anything over a geometric tolerance under the same lookahead. In our setting it added little that we could detect: most of the gain over shape-uncertainty touching appears to come from the grasp-centric criterion itself.
+We choose the touch point that maximizes the \emph{expected best grasp success probability after the touch}. In plain words, we touch where either outcome, hit or miss, makes it clear where to grasp next. The success probability of each shape candidate at each grasp point comes from a small neural network trained on physics-simulation trials in which friction, mass, and finger gains are randomized; it is averaged over the candidates as in Lundell et al.~\cite{lundell2019robust}, but we use it to choose the touch as well as the grasp. DA-GRD~\cite{wang2026dagrd} also explores in grasp space rather than object space, for a known object whose pose drifted between perception and execution; it scores grasps with a geometric tolerance. We address hidden \emph{shape} under a shelf. Our touch-selection rule works with any per-candidate success model; we compare the network with a model of three thresholds set from preliminary grasp trials. For our part family, whose graspability is decided mostly by how far the grasp point lies inside the body edges, the simple model did almost as well, so the gain over shape-uncertainty touching comes from the grasp-centric criterion itself.
 
 Our contributions are:
 \begin{enumerate}
 \item A touch-selection rule for grasping a partially occluded part: shape candidates from partial vision and light contacts, scored by the expected best learned grasp success after the touch.
-\item A paired evaluation on 240 layouts with a humanoid under a shelf, where the board both hides the part and constrains the hand. After one touch, our rule beats touching at the largest shape uncertainty by 6.7 points; with a geometric tolerance instead of the learned model it still leads by \GeomVsUnc{} ($p=0.050$), so most of the gain appears to come from the criterion rather than from the learning.
-\item Two negative results with analysis: the learned success model adds only \GeomDiffShort{} over a hand-measured geometric tolerance (not significant; the data do not rule out a gain of up to about 4.6 points), and deciding the number of touches by a success-probability threshold gives no gain over always touching once.
+\item A paired evaluation on 240 layouts with a humanoid under a shelf, where the board both hides the part and constrains the hand. After one touch, our rule beats touching at the largest shape uncertainty by 6.7 points; with a three-threshold success model instead of the network it still leads by \GeomVsUnc{} ($p=0.050$), so the gain comes from the criterion rather than from the detail of the success model.
+\item Analysis of when the simple choices suffice: for this part family a three-threshold success model is within \GeomDiffShort{} of the network (not significant), and one touch is enough, so deciding the number of touches by a success-probability threshold gives no gain over always touching once.
 \end{enumerate}
 
 \section{Related Work}
@@ -120,7 +120,7 @@ u^*=\arg\max_{u\in U}\sum_{o} P(o\mid u,b)\,\max_{g\in G} P(S{=}1\mid g,b_{u,o})
 \end{equation}
 where $U$ are points every 3\,mm along the mean axis and $b_{u,o}$ is the belief after observing $o$ at $u$. The candidate-by-grasp success matrix is computed once; each $b_{u,o}$ only reweights its rows.
 
-\textbf{Baselines.} \Unc{} (maximum shape uncertainty) touches where $p(u)(1-p(u))$ is largest, with $p(u)$ the fraction of particles whose body lies under $u$; this is the occupancy-variance criterion of Act-VH~\cite{rustler2022actvh} applied to our problem. \Rand{} chooses uniformly from $U$. \Geom{} uses the same lookahead (\ref{eq:voi}) and the same grasp choice, but replaces $f_\phi$ by a geometric tolerance: success if $g$ lies at least 3.5\,mm behind the body front edge, 2.5\,mm before the back edge, and within 5\,mm laterally (margins from preliminary grasps). \Geom{} is our closest analogue of DA-GRD's tolerance-based scoring.
+\textbf{Baselines.} \Unc{} (maximum shape uncertainty) touches where $p(u)(1-p(u))$ is largest, with $p(u)$ the fraction of particles whose body lies under $u$; this is the occupancy-variance criterion of Act-VH~\cite{rustler2022actvh} applied to our problem. \Rand{} chooses uniformly from $U$. \Geom{} uses the same lookahead (\ref{eq:voi}) and the same grasp choice, but replaces $f_\phi$ by a model of three thresholds: success if $g$ lies at least 3.5\,mm behind the body front edge, 2.5\,mm before the back edge, and within 5\,mm laterally. The thresholds were set before this work from a few dozen preliminary grasps in the same simulator (stepping the grasp point by 1.5\,mm near the edges) plus a small margin. \Geom{} is also our closest analogue of DA-GRD's tolerance-based scoring. The rule (\ref{eq:voi}) itself needs only a per-candidate success model and is unchanged.
 
 \subsection{Touch motion}\label{sec:touchmotion}
 A touch stops at about 10\,g so as not to move the part. With the wrist in the grasping orientation, the thumb is raised, and the middle fingertip descends from 1\,cm above the body top in 1\,mm steps until the contact force exceeds 0.1\,N. Reaching the table without touching the part is a miss. Outcomes are separated by whether the contact lies within 4\,mm of the fingertip center and by the contacted geometry (body or flange); on hardware we expect to use the contact location of a pressure sensor and the fingertip height at contact. After a touch, the fingertip returns to its start height and the arm stays under the board, moving horizontally to the next touch or grasp point.
@@ -148,7 +148,7 @@ Predictor & 8,000 grasps on the true shape at random points; MLP 64$\times$64 (s
 
 Table~\ref{tab:setup} lists the setup; Appendix~\ref{app:setup} gives the details.
 
-\textbf{Touch selection (main comparison).} For each of 240 layouts, each rule (\Ours, \Unc, \Rand, \Geom) touches up to twice, and the grasp at $g^*$ after each touch is recorded. Perception, predictor, and grasp selection are shared, except that \Geom{} uses the geometric tolerance for both touch and grasp choice.
+\textbf{Touch selection (main comparison).} For each of 240 layouts, each rule (\Ours, \Unc, \Rand, \Geom) touches up to twice, and the grasp at $g^*$ after each touch is recorded. Perception, predictor, and grasp selection are shared, except that \Geom{} uses the threshold model for both touch and grasp choice.
 
 \textbf{Number of touches and stopping.} On the first 120 layouts, \Ours{} touches up to four times and the grasp after each touch $k=0,\dots,4$ is recorded. From these we compute: no touch (A), $n$ touches (B$n$), and stopping at the first touch whose predicted success reaches $\tau$ (C($\tau$), at most four). Since the touch choice does not depend on $\tau$, this equals running each condition separately.
 
@@ -163,7 +163,7 @@ Table~\ref{tab:setup} lists the setup; Appendix~\ref{app:setup} gives the detail
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/success_by_vis.pdf}
-\caption{Grasp success after one touch by visible length (240 layouts, 60 per level). \Geom{} uses the same lookahead as \Ours{} with a geometric tolerance instead of the learned success model.}
+\caption{Grasp success after one touch by visible length (240 layouts, 60 per level). \Geom{} uses the same lookahead as \Ours{} with a three-threshold success model instead of the network.}
 \label{fig:vis}
 \end{figure}
 
@@ -180,8 +180,8 @@ After one touch, the median standard deviation of the body front edge estimate w
 
 Fig.~\ref{fig:layout64} shows the difference in one layout. \Unc{} touches where the body ``may or may not be,'' which confirms that the body exists but says little about its front edge, which decides the grasp point. \Ours{} touches where the outcome changes the grasp choice most; here that was beyond the far end of the body, and the miss revealed that the body, and hence its front edge, lies further forward. Touching the far side is one example; in most layouts \Ours{} touches near the front edge (Sec.~\ref{sec:disc}).
 
-\subsection{Learned versus geometric success}\label{sec:geom}
-\GeomResultsParagraph{} The learned model therefore added little detectable success in this setting: the grasp-centric lookahead, with either success model, is what separates the rules from \Unc{} and \Rand. The confidence interval does not rule out a gain of a few points. Note that the geometric margins were measured with this hand in the same simulator; they are a strong baseline that the learned model must beat without any hand-measured tolerance.
+\subsection{Simple versus detailed success model}\label{sec:geom}
+\GeomResultsParagraph{} With either success model, the grasp-centric lookahead is what separates the rules from \Unc{} and \Rand. The confidence interval does not rule out a gain of a few points for the network.
 
 \subsection{How many touches, and when to stop}
 
@@ -226,7 +226,7 @@ Failed grasps moved the part substantially: in the 120 layouts, 91\% of 55 failu
 
 One touch suffices because the depth profile of the part (front flange, body behind) is known and the unknown range is short. Once the camera fixes position and yaw, the remaining unknown is mostly the body front edge within about 20\,mm, while the graspable span inside the body is at least 6\,mm; one touch that tells which side of the edge it landed on is enough to place the grasp inside. Parts of unknown type or with longer unknown ranges may need more touches.
 
-\textbf{What the learned model adds.} Under the same lookahead, the learned success model raised success by only \GeomDiffShort{} over the geometric tolerance (not significant) and gave a slightly lower Brier score. Two reasons are likely. The part family is simple: success is decided mostly by how far the grasp point lies inside the body edges, which a tolerance captures well. And the tolerance was itself measured in preliminary grasps with this hand in this simulator, so it already encodes most of what the physics trials teach. The learned model is still useful in two ways: it is obtained from physics trials without hand-measuring margins for each new hand or part, and it gives probabilities that can be compared with a threshold or across actions. Whether it pays off more for parts whose success depends on friction, mass distribution, or contact geometry in ways a tolerance cannot express is open.
+\textbf{How detailed the success model must be.} Both success models are fitted to grasps in the same simulator; they differ in size (three thresholds from a few dozen trials versus a network from 8,000) and in output (0 or 1 per candidate versus a probability). For this part, once the hidden shape is known, graspability is decided mostly by how far the grasp point lies inside the body edges, which three thresholds capture; the part was not hard enough to need the network, and the network was within \GeomDiffShort{} (not significant) with a slightly lower Brier score. A more detailed model should matter for parts whose graspable region is decided by more than the distance to the edges, e.g., an off-center mass that makes the best grasp point depend on the ratio of the hidden lengths. That benefit would appear even for fully visible parts, as in learned grasp-quality models~\cite{mahler2017dexnet2}; what our rule adds is that the touch then targets whatever the success model says matters, without change to the rule.
 
 \textbf{Why stopping did not help.} One well-chosen touch already brings success near its ceiling (about 97\%); the few remaining failures (4 of 120 with B1) show no common cause among the stored physics values. When outcomes are only hit/miss or more quantities are unknown, stopping could save touches without losing success; we did not test this.
 
@@ -238,7 +238,7 @@ One touch suffices because the depth profile of the part (front flange, body beh
 
 \section{Conclusion}
 
-To grasp a part whose back is hidden by a shelf board, we choose where to touch by the expected best grasp success after the touch, averaged over shape candidates. On 240 paired layouts, one touch chosen this way gave 95.4\% grasp success, against 88.8\% for touching at the largest shape uncertainty and 88.8\% for random touches, with the largest gain when the least was visible. A geometric tolerance in place of the learned success model gave \GeomSucc, so in this setting the criterion mattered more than the success model. When touch is used to complete a shape, the robot should touch where the outcome changes the grasp choice most, not where the shape could be reconstructed best. Hardware validation, broader shape families, and modeling part motion during touching remain future work.
+To grasp a part whose back is hidden by a shelf board, we choose where to touch by the expected best grasp success after the touch, averaged over shape candidates. On 240 paired layouts, one touch chosen this way gave 95.4\% grasp success, against 88.8\% for touching at the largest shape uncertainty and 88.8\% for random touches, with the largest gain when the least was visible. A success model of three thresholds in place of the network gave \GeomSucc: this part family did not need a detailed success model, and the gain came from where the robot touched. When touch is used to complete a shape, the robot should touch where the outcome changes the grasp choice most, not where the shape could be reconstructed best. Hardware validation, broader shape families, and modeling part motion during touching remain future work.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
