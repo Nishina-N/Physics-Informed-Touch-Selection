@@ -28,7 +28,9 @@ def fmt_p(p):
 
 
 def main():
-    ours = {r["i"]: r for r in load("results/tsel_*.jsonl") if r["rule"] == "voi"}
+    allr = load("results/tsel_*.jsonl")
+    ours = {r["i"]: r for r in allr if r["rule"] == "voi"}
+    unc = {r["i"]: r for r in allr if r["rule"] == "unc"}
     geom = {r["i"]: r for r in load("results/tselgeom_*.jsonl")}
     ids = sorted(set(ours) & set(geom))
     out = os.path.join(ROOT, "paper", "numbers_geom.tex")
@@ -54,16 +56,21 @@ def main():
     a2, g2, (m2, lo2, hi2, w2, l2, p2) = res[2]
     sd_o = np.median([ours[i]["steps"][0]["body_front_sd_mm"] for i in ids])
     sd_g = np.median([geom[i]["steps"][0]["body_front_sd_mm"] for i in ids])
-    sign = lambda x: f"{x:+.1f}"
-    summ = (f"under the same lookahead lowered success after one touch from {a.mean()*100:.1f}\\% to {g.mean()*100:.1f}\\% "
-            f"({sign(-m)} points, 95\\% CI [{sign(-hi)}, {sign(-lo)}], McNemar ${fmt_p(p)}$)")
+    sign = lambda x: f"{x:+.1f}".replace("-", "$-$")
+    u = np.array([unc[i]["steps"][0]["success"] for i in ids], float)
+    mu, lou, hiu, wu, lu, pu = paired(g, u, rng)
+    br = lambda d: float(np.mean([(d[i]["steps"][0]["p"] - d[i]["steps"][0]["success"]) ** 2 for i in ids]))
+    brier_o, brier_g = br(ours), br(geom)
+    summ = (f"{g.mean()*100:.1f}\\%, only {sign(m)} points below ours (95\\% CI [{sign(lo)}, {sign(hi)}], ${fmt_p(p)}$)")
     para = (f"With the geometric tolerance in place of $f_\\phi$ (\\Geom), success after one touch was {g.mean()*100:.1f}\\%, against "
             f"{a.mean()*100:.1f}\\% for \\Ours{{}} (paired difference {sign(m)} points, 95\\% CI [{sign(lo)}, {sign(hi)}]; discordant layouts "
             f"{w} vs.\\ {l}; McNemar ${fmt_p(p)}$). By visible length, \\Ours{{}} minus \\Geom{{}} was "
             + ", ".join(f"{sign(x[3])} [{sign(x[4])}, {sign(x[5])}] at {x[0]:.0f}\\,mm" for x in per)
             + f". After two touches, success was {a2.mean()*100:.1f}\\% versus {g2.mean()*100:.1f}\\% ({sign(m2)} [{sign(lo2)}, {sign(hi2)}], ${fmt_p(p2)}$). "
-            f"The median spread of the body front edge after one touch was {sd_o:.1f}\\,mm (\\Ours) and {sd_g:.1f}\\,mm (\\Geom).")
-    open(out, "w").write(f"\\newcommand{{\\GeomSummary}}{{{summ}}}\n\\newcommand{{\\GeomDiffShort}}{{{sign(m)} points}}\n"
+            f"\\Geom{{}} was still {sign(mu)} points above \\Unc{{}} ([{sign(lou)}, {sign(hiu)}]; {wu} vs.\\ {lu}; ${fmt_p(pu)}$). "
+            f"The median spread of the body front edge after one touch was {sd_o:.1f}\\,mm for both, and the Brier score of the "
+            f"predicted success at the executed grasp was {brier_o:.3f} (\\Ours) and {brier_g:.3f} (\\Geom).")
+    open(out, "w").write(f"\\newcommand{{\\GeomSummary}}{{{summ}}}\n\\newcommand{{\\GeomDiffShort}}{{{sign(m)} points}}\n\\newcommand{{\\GeomVsUnc}}{{{sign(mu)} points}}\n\\newcommand{{\\GeomSucc}}{{{g.mean()*100:.1f}\\%}}\n"
                          f"\\newcommand{{\\GeomResultsParagraph}}{{{para}}}\n")
     print(open(out).read())
 

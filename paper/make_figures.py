@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 OUT = os.path.join(ROOT, "paper", "figures")
 VIS = (10.0, 15.0, 20.0, 25.0)
-RULES = [("voi", "Ours", "#2a78d6", ""), ("unc", "Max. shape uncertainty", "#eb6834", "//"), ("rand", "Random", "#1baf7a", "..")]
+RULES = [("voi", "Ours", "#2a78d6", ""), ("geom", "Ours-Geom", "#eda100", ""), ("unc", "MaxUnc", "#eb6834", "//"), ("rand", "Random", "#1baf7a", "..")]
 INK, MUTED, GRID = "#1d2120", "#5f6763", "#e2e3dd"
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
@@ -26,29 +26,29 @@ def load(pattern):
 
 def success_by_vis():
     by = {}
-    for r in load("results/tsel_*.jsonl"):
+    for r in load("results/tsel_*.jsonl") + load("results/tselgeom_*.jsonl"):
         by.setdefault(r["i"], {})[r["rule"]] = r
-    ids = sorted(i for i, v in by.items() if len(v) == 3)
+    ids = sorted(i for i, v in by.items() if len(v) == 4)
     vis = np.array([by[i]["voi"]["vis"] for i in ids])
     groups = [f"{v:.0f} mm" for v in VIS] + ["All"]
     fig, ax = plt.subplots(figsize=(3.45, 2.0))
-    marks = {"voi": "o", "unc": "s", "rand": "^"}
-    w = 0.22
+    marks = {"voi": "o", "geom": "D", "unc": "s", "rand": "^"}
+    w = 0.19
     for j, (key, name, col, _) in enumerate(RULES):         # dot plot: the axis need not start at zero
         s = np.array([by[i][key]["steps"][0]["success"] for i in ids], float)
         vals = [s[vis == v].mean() * 100 for v in VIS] + [s.mean() * 100]
-        x = np.arange(len(groups)) + (j - 1) * w
+        x = np.arange(len(groups)) + (j - 1.5) * w
         ax.plot(x, vals, linestyle="none", marker=marks[key], markersize=6, color=col, markeredgecolor="white",
                 markeredgewidth=0.8, label=name, zorder=3)
         for xi, v in zip(x, vals):
-            ax.text(xi, v - 2.2, f"{v:.0f}", ha="center", va="top", fontsize=5.5, color=INK)
+            ax.text(xi, v - 2.2, f"{v:.0f}", ha="center", va="top", fontsize=5, color=INK)
     ax.axvline(len(VIS) - 0.5, color=GRID, linewidth=0.8)
     ax.set_xticks(np.arange(len(groups)), groups)
     ax.set_xlabel("Visible length of the flange", color=MUTED)
     ax.set_ylabel("Success after 1 touch (%)")
     ax.set_ylim(70, 101); ax.set_yticks([70, 80, 90, 100])
     ax.grid(axis="y", color=GRID, linewidth=0.6, zorder=0)
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3, fontsize=6.5, frameon=False, handletextpad=0.3, columnspacing=1.0)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, fontsize=6.5, frameon=False, handletextpad=0.3, columnspacing=1.0)
     fig.tight_layout(pad=0.3)
     fig.savefig(os.path.join(OUT, "success_by_vis.pdf"))
     print("success_by_vis.pdf", len(ids), "layouts")
