@@ -73,6 +73,8 @@ uv run python gen_grasp_data.py 0 2 8000
 uv run python run_touchsel.py 0 2 240 predictor.pkl
 TSEL_RULES=geom uv run python run_touchsel.py \
   0 2 240 predictor.pkl
+TSEL_RULES=fixshape uv run python run_touchsel.py \
+  0 2 240 predictor.pkl
 uv run python run_branch.py 0 2 120 predictor.pkl
 \end{verbatim}
 \end{footnotesize}

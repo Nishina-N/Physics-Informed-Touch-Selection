@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\caption{Touch rules: what each estimates and how it chooses touches, and grasp success after one and two touches (240 paired layouts). The last column is \Ours{} minus the rule after one touch, with a 95\% bootstrap CI.}
+\label{tab:rules}
+\centering
+\small
+\begin{tabular}{@{}lllllll@{}}
+\toprule
+Rule & Hidden shape estimated & Touch criterion & Success model & 1 touch & 2 touches & \Ours{} $-$ rule \\
+\midrule
+\Ours & yes & grasp (lookahead) & network & 95.4\% & 95.0\% & --- \\
+\Geom & yes & grasp (lookahead) & 3 thresholds & 93.8\% & 94.2\% & +1.7 [$-$1.3, +4.6] \\
+\Fix & no (nominal) & grasp (lookahead) & network & 76.7\% & 79.6\% & +18.8 [+12.9, +25.0] \\
+\Unc & yes & shape uncertainty & network & 88.8\% & 91.7\% & +6.7 [+2.1, +11.3] \\
+\Rand & yes & random & network & 88.8\% & 88.3\% & +6.7 [+2.5, +11.3] \\
+\bottomrule
+\end{tabular}
+\end{table*}
