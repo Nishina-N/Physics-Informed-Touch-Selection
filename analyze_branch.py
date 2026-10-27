@@ -36,6 +36,12 @@ for name, rule in rules:
         idx = [j for j, r in enumerate(R) if r["vis"] == v]
         per.append(f"{np.mean([s[j] for j in idx]):.2f}/{np.mean([k[j] for j in idx]):.1f}")
     print(f"{name:5s} | {np.mean(s):.3f} [{ci[0]:.2f},{ci[1]:.2f}] | {np.mean(k):.2f} | {' '.join(per)}")
+# 止める規則と毎回1回触る規則の、同じ配置どうしの差（論文の C(0.85) − B1）
+for t in (0.85,):
+    c = np.array([pick(r, ("C", t))["success"] for r in R], float); b = np.array([pick(r, ("B", 1))["success"] for r in R], float)
+    kc = np.array([pick(r, ("C", t))["k"] for r in R], float)
+    lo, hi = boot_ci(c - b)
+    print(f"C{t} − B1: {(c - b).mean() * 100:+.1f} ポイント [{lo * 100:+.1f}, {hi * 100:+.1f}]、触る回数の差 {kc.mean() - 1:+.2f} 回")
 # 較正：各ステップの予測 p と成否
 P = np.array([s["p"] for r in R for s in r["steps"]]); S = np.array([s["success"] for r in R for s in r["steps"]])
 print("較正（全ステップ）")
