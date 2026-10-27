@@ -2,7 +2,10 @@
   voi : 触った後の最良の成功確率の期待値が最大の点（本研究）
   unc : 部品がそこにあるかどうかの確率 p の分散 p(1−p) が最大の点（Act-VH と同じ「形の不確かさが最大」の考え方）
   rand: 候補から一様に選ぶ
-使い方: python3 run_touchsel.py k n N predictor.pkl → results/tsel_k.jsonl
+  geom: voi と同じ先読みだが、成功確率に学習した予測器を使わず、幾何の規則（本体の縁から余裕の内側なら成功）を使う。
+        触る点も掴む点もこの規則で選ぶ（学習した成功確率がどれだけ役に立つかを見る比較。DA-GRD に近い条件）
+使い方: python3 run_touchsel.py k n N predictor.pkl → results/tsel_k.jsonl（voi・unc・rand）
+        TSEL_RULES=geom python3 run_touchsel.py k n N predictor.pkl → results/tselgeom_k.jsonl
 """
 import sys, gc, json, os, time
 import numpy as np
@@ -12,7 +15,7 @@ import partfilter as F
 import build_scene as bs
 import run_branch as RB
 
-RULES = ("voi", "unc", "rand")
+RULES = tuple(os.environ.get("TSEL_RULES", "voi,unc,rand").split(","))
 N_TOUCH = 2
 
 
@@ -23,7 +26,7 @@ def occupancy(parts, x, y):
 
 
 def choose(rule, est, gc_, tc, rng):
-    if rule == "voi":
+    if rule in ("voi", "geom"):                     # geom は予測器を読み込まないので、幾何の規則で同じ先読みをする
         return F.choose_touch_m(est, gc_, tc)[0]
     if rule == "unc":
         v = [occupancy(est, x, y) for x, y in tc]
@@ -35,7 +38,11 @@ def choose(rule, est, gc_, tc, rng):
 def trial(i, rule, pred):
     lay = RB.layout(i); rng = np.random.default_rng(5000 + i); rr = np.random.default_rng(9000 + i)
     s = S.ShelfSim(RB.W, visible=lay["vis"], part=(lay["fl"], lay["L"]), dxy=(0, lay["dy"]), yaw_deg=lay["yaw"])
-    RB.apply_phys(s, lay); F.use_predictor(pred, s.front_x)
+    RB.apply_phys(s, lay)
+    if rule == "geom":
+        F._PRED = None                                # 成功確率は幾何の規則（partfilter.prob_matrix）
+    else:
+        F.use_predictor(pred, s.front_x)
     m, d = s.m, s.d
     cam, dep, cm, tm, occl = P.observe(m, d, s.cube, rng)
     _, ztab = P.estimate_size(cam, dep, cm, tm)
@@ -65,7 +72,8 @@ if __name__ == "__main__":
     k, n, N, pred = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
     out_dir = os.environ.get("RESULTS_DIR", "results")             # 結果の置き場所（既定 results）
     os.makedirs(out_dir, exist_ok=True)
-    fn = f"{out_dir}/tsel_{k}.jsonl"
+    tag = "tsel" if RULES == ("voi", "unc", "rand") else "tsel" + "".join(RULES)
+    fn = f"{out_dir}/{tag}_{k}.jsonl"
     done = {(json.loads(l)["i"], json.loads(l)["rule"]) for l in open(fn)} if os.path.exists(fn) else set()
     out = open(fn, "a")
     jobs = [(i, r) for i in range(N) for r in RULES]

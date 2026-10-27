@@ -9,3 +9,10 @@ MUJOCO_LOG.TXT
 !docs/figures/*.png
 !results/vlmpoint_img/*.png
 !paper/figures/*.png
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
