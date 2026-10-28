@@ -18,3 +18,4 @@ paper/*.fls
 paper/*.fdb_latexmk
 paper/author.tex
 paper/arxiv/
+paper/*.xdv
