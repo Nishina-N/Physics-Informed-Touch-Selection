@@ -63,7 +63,7 @@ arrow(f"M{IX[4]+50},{R1+IH} V{R1+IH+40} H{IX[2]+IW/2} V{R1+IH+4}",          # �
       T("もう一度触るなら ③ へ（主な評価は 1 回）", "To touch again, back to (3) (main evaluation: 1 touch)"), IX[2] + IW / 2 + 14, R1 + IH + 32)
 # 予測器 → ③・⑥
 arrow(f"M{LX[3]+60},{LY+LH} V{284} H{IX[2]+IW/2} V{R1-4}", T("f_φ を使う", "uses f_φ"), IX[2] + IW / 2 + 10, 300, ACC)
-arrow(f"M{LX[3]+LW-20},{LY+LH} V{R1-20} H{IX[4]+IW+25} V{R2+IH/2} H{IX[4]+IW+4}", None, 0, 0, ACC, True)
+arrow(f"M{LX[3]+LW},{LY+LH/2} H{IX[4]+IW+20} V{R2+IH/2} H{IX[4]+IW+4}", None, 0, 0, ACC, True)   # 予測器の右の辺から出て、右端を下り ⑥ の右の辺へ
 # 凡例
 el.append(f"<rect x='40' y='{R2+8}' width='22' height='16' rx='3' fill='{HI_BG}' stroke='{ACC}' stroke-width='2'/>")
 el.append(f"<text x='72' y='{R2+22}' font-size='15' fill='{FG}'>{T('学習した予測器 f_φ を使う所', 'Steps that use the learned predictor f_φ')}</text>")
