@@ -247,6 +247,9 @@ One touch suffices because the depth profile of the part (front flange, body beh
 
 To grasp a part whose back is hidden by a shelf board, we choose where to touch by the expected best grasp success after the touch, averaged over shape candidates. On 240 paired layouts, one touch chosen this way gave 95.4\% grasp success, against 88.8\% for touching at the largest shape uncertainty and 88.8\% for random touches, with the largest gain when the least was visible. A success model of three thresholds in place of the network gave \GeomSucc: this part family did not need a detailed success model, and the gain came from where the robot touched. Fixing the shape to nominal lengths and estimating only the pose gave \FixSucc, so the hidden shape must be part of the belief. When touch is used to complete a shape, the robot should touch where the outcome changes the grasp choice most, not where the shape could be reconstructed best. Hardware validation, broader shape families, and modeling part motion during touching remain future work.
 
+\section*{Acknowledgment}
+The author used Claude (Anthropic) to implement the code, run the simulation experiments, produce the figures, and draft and translate the text. The author set the problem, chose the method and the comparisons, interpreted the results, and reviewed and edited all content, and takes full responsibility for it.
+
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 
